@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_ProjectMaster" targetNamespace="https://project-master.local/bpmn">
+  <bpmn:process id="Process_ProjectMasterLifecycle" name="Жизненный цикл Project Master 2.0" isExecutable="false">
+    <bpmn:startEvent id="Event_Idea" name="Идея"><bpmn:outgoing>Flow_01</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:userTask id="Activity_Discovery" name="Провести Discovery"><bpmn:incoming>Flow_01</bpmn:incoming><bpmn:outgoing>Flow_02</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="Activity_Specification" name="Сформировать спецификацию"><bpmn:incoming>Flow_02</bpmn:incoming><bpmn:outgoing>Flow_03</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="Activity_ConceptReview" name="Утвердить концепцию"><bpmn:incoming>Flow_03</bpmn:incoming><bpmn:outgoing>Flow_04</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="Activity_ProcessModeling" name="Смоделировать процессы"><bpmn:incoming>Flow_04</bpmn:incoming><bpmn:outgoing>Flow_05</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="Activity_Architecture" name="Спроектировать архитектуру"><bpmn:incoming>Flow_05</bpmn:incoming><bpmn:outgoing>Flow_06</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="Activity_ArchitectureReview" name="Утвердить архитектуру"><bpmn:incoming>Flow_06</bpmn:incoming><bpmn:outgoing>Flow_07</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="Activity_Roadmap" name="Составить roadmap"><bpmn:incoming>Flow_07</bpmn:incoming><bpmn:outgoing>Flow_08</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="Activity_RoadmapReview" name="Утвердить roadmap"><bpmn:incoming>Flow_08</bpmn:incoming><bpmn:outgoing>Flow_09</bpmn:outgoing></bpmn:userTask>
+    <bpmn:serviceTask id="Activity_RecoverContext" name="Восстановить контекст"><bpmn:incoming>Flow_09</bpmn:incoming><bpmn:incoming>Flow_21</bpmn:incoming><bpmn:outgoing>Flow_10</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="Activity_SelectComponent" name="Выбрать активный компонент"><bpmn:incoming>Flow_10</bpmn:incoming><bpmn:incoming>Flow_19</bpmn:incoming><bpmn:outgoing>Flow_11</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="Activity_LoadContract" name="Загрузить контракт компонента"><bpmn:incoming>Flow_11</bpmn:incoming><bpmn:outgoing>Flow_12</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="Activity_Implement" name="Реализовать компонент"><bpmn:incoming>Flow_12</bpmn:incoming><bpmn:incoming>Flow_17</bpmn:incoming><bpmn:outgoing>Flow_13</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="Activity_Test" name="Протестировать компонент"><bpmn:incoming>Flow_13</bpmn:incoming><bpmn:outgoing>Flow_14</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="Activity_VerifyRequirements" name="Проверить требования"><bpmn:incoming>Flow_14</bpmn:incoming><bpmn:outgoing>Flow_15</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="Activity_VerifyBPMN" name="Проверить BPMN"><bpmn:incoming>Flow_15</bpmn:incoming><bpmn:outgoing>Flow_15a</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="Activity_Review" name="Провести ревью"><bpmn:incoming>Flow_15a</bpmn:incoming><bpmn:outgoing>Flow_15b</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="Activity_PersistState" name="Сохранить состояние"><bpmn:incoming>Flow_15b</bpmn:incoming><bpmn:outgoing>Flow_16</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_ComponentAccepted" name="Компонент принят?"><bpmn:incoming>Flow_16</bpmn:incoming><bpmn:outgoing>Flow_17a</bpmn:outgoing><bpmn:outgoing>Flow_18</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Activity_Diagnose" name="Диагностировать и исправить"><bpmn:incoming>Flow_17a</bpmn:incoming><bpmn:outgoing>Flow_17</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="Activity_Checkpoint" name="Сохранить checkpoint"><bpmn:incoming>Flow_18</bpmn:incoming><bpmn:outgoing>Flow_18a</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_MoreComponents" name="Есть ещё components?"><bpmn:incoming>Flow_18a</bpmn:incoming><bpmn:outgoing>Flow_19</bpmn:outgoing><bpmn:outgoing>Flow_20</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Activity_PhaseVerification" name="Проверить фазу"><bpmn:incoming>Flow_20</bpmn:incoming><bpmn:outgoing>Flow_20a</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_MorePhases" name="Есть ещё фазы?"><bpmn:incoming>Flow_20a</bpmn:incoming><bpmn:outgoing>Flow_21</bpmn:outgoing><bpmn:outgoing>Flow_22</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Activity_Verification" name="Проверить проект"><bpmn:incoming>Flow_22</bpmn:incoming><bpmn:outgoing>Flow_23</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:userTask id="Activity_CompletionReview" name="Утвердить завершение"><bpmn:incoming>Flow_23</bpmn:incoming><bpmn:outgoing>Flow_24</bpmn:outgoing></bpmn:userTask>
+    <bpmn:endEvent id="Event_Complete" name="Проект завершён"><bpmn:incoming>Flow_24</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_01" sourceRef="Event_Idea" targetRef="Activity_Discovery"/>
+    <bpmn:sequenceFlow id="Flow_02" sourceRef="Activity_Discovery" targetRef="Activity_Specification"/>
+    <bpmn:sequenceFlow id="Flow_03" sourceRef="Activity_Specification" targetRef="Activity_ConceptReview"/>
+    <bpmn:sequenceFlow id="Flow_04" sourceRef="Activity_ConceptReview" targetRef="Activity_ProcessModeling"/>
+    <bpmn:sequenceFlow id="Flow_05" sourceRef="Activity_ProcessModeling" targetRef="Activity_Architecture"/>
+    <bpmn:sequenceFlow id="Flow_06" sourceRef="Activity_Architecture" targetRef="Activity_ArchitectureReview"/>
+    <bpmn:sequenceFlow id="Flow_07" sourceRef="Activity_ArchitectureReview" targetRef="Activity_Roadmap"/>
+    <bpmn:sequenceFlow id="Flow_08" sourceRef="Activity_Roadmap" targetRef="Activity_RoadmapReview"/>
+    <bpmn:sequenceFlow id="Flow_09" sourceRef="Activity_RoadmapReview" targetRef="Activity_RecoverContext"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Activity_RecoverContext" targetRef="Activity_SelectComponent"/>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Activity_SelectComponent" targetRef="Activity_LoadContract"/>
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="Activity_LoadContract" targetRef="Activity_Implement"/>
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Activity_Implement" targetRef="Activity_Test"/>
+    <bpmn:sequenceFlow id="Flow_14" sourceRef="Activity_Test" targetRef="Activity_VerifyRequirements"/>
+    <bpmn:sequenceFlow id="Flow_15" sourceRef="Activity_VerifyRequirements" targetRef="Activity_VerifyBPMN"/>
+    <bpmn:sequenceFlow id="Flow_15a" sourceRef="Activity_VerifyBPMN" targetRef="Activity_Review"/>
+    <bpmn:sequenceFlow id="Flow_15b" sourceRef="Activity_Review" targetRef="Activity_PersistState"/>
+    <bpmn:sequenceFlow id="Flow_16" sourceRef="Activity_PersistState" targetRef="Gateway_ComponentAccepted"/>
+    <bpmn:sequenceFlow id="Flow_17a" name="Нет" sourceRef="Gateway_ComponentAccepted" targetRef="Activity_Diagnose"/>
+    <bpmn:sequenceFlow id="Flow_17" sourceRef="Activity_Diagnose" targetRef="Activity_Implement"/>
+    <bpmn:sequenceFlow id="Flow_18" name="Да" sourceRef="Gateway_ComponentAccepted" targetRef="Activity_Checkpoint"/>
+    <bpmn:sequenceFlow id="Flow_18a" sourceRef="Activity_Checkpoint" targetRef="Gateway_MoreComponents"/>
+    <bpmn:sequenceFlow id="Flow_19" name="Да" sourceRef="Gateway_MoreComponents" targetRef="Activity_SelectComponent"/>
+    <bpmn:sequenceFlow id="Flow_20" name="Нет" sourceRef="Gateway_MoreComponents" targetRef="Activity_PhaseVerification"/>
+    <bpmn:sequenceFlow id="Flow_20a" sourceRef="Activity_PhaseVerification" targetRef="Gateway_MorePhases"/>
+    <bpmn:sequenceFlow id="Flow_21" name="Да" sourceRef="Gateway_MorePhases" targetRef="Activity_RecoverContext"/>
+    <bpmn:sequenceFlow id="Flow_22" name="Нет" sourceRef="Gateway_MorePhases" targetRef="Activity_Verification"/>
+    <bpmn:sequenceFlow id="Flow_23" sourceRef="Activity_Verification" targetRef="Activity_CompletionReview"/>
+    <bpmn:sequenceFlow id="Flow_24" sourceRef="Activity_CompletionReview" targetRef="Event_Complete"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_ProjectMaster">
+    <bpmndi:BPMNPlane id="BPMNPlane_ProjectMaster" bpmnElement="Process_ProjectMasterLifecycle">
+      <bpmndi:BPMNShape id="Shape_Idea" bpmnElement="Event_Idea"><dc:Bounds x="80" y="172" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Discovery" bpmnElement="Activity_Discovery"><dc:Bounds x="150" y="150" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Specification" bpmnElement="Activity_Specification"><dc:Bounds x="310" y="150" width="130" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Concept" bpmnElement="Activity_ConceptReview"><dc:Bounds x="480" y="150" width="130" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Process" bpmnElement="Activity_ProcessModeling"><dc:Bounds x="650" y="150" width="140" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Architecture" bpmnElement="Activity_Architecture"><dc:Bounds x="830" y="150" width="145" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_ArchitectureReview" bpmnElement="Activity_ArchitectureReview"><dc:Bounds x="1015" y="150" width="145" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Roadmap" bpmnElement="Activity_Roadmap"><dc:Bounds x="1200" y="150" width="130" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_RoadmapReview" bpmnElement="Activity_RoadmapReview"><dc:Bounds x="1370" y="150" width="140" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Recover" bpmnElement="Activity_RecoverContext"><dc:Bounds x="1550" y="150" width="140" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Select" bpmnElement="Activity_SelectComponent"><dc:Bounds x="1730" y="150" width="145" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Load" bpmnElement="Activity_LoadContract"><dc:Bounds x="1915" y="150" width="150" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Implement" bpmnElement="Activity_Implement"><dc:Bounds x="2105" y="150" width="145" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Test" bpmnElement="Activity_Test"><dc:Bounds x="2290" y="150" width="140" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_VerifyReq" bpmnElement="Activity_VerifyRequirements"><dc:Bounds x="2470" y="150" width="145" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_VerifyBPMN" bpmnElement="Activity_VerifyBPMN"><dc:Bounds x="2655" y="150" width="140" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Review" bpmnElement="Activity_Review"><dc:Bounds x="2835" y="150" width="130" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Persist" bpmnElement="Activity_PersistState"><dc:Bounds x="3005" y="150" width="140" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Accepted" bpmnElement="Gateway_ComponentAccepted" isMarkerVisible="true"><dc:Bounds x="3190" y="165" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Diagnose" bpmnElement="Activity_Diagnose"><dc:Bounds x="3135" y="300" width="160" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Checkpoint" bpmnElement="Activity_Checkpoint"><dc:Bounds x="3285" y="150" width="145" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_MoreComponents" bpmnElement="Gateway_MoreComponents" isMarkerVisible="true"><dc:Bounds x="3475" y="165" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_PhaseVerification" bpmnElement="Activity_PhaseVerification"><dc:Bounds x="3570" y="150" width="130" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_MorePhases" bpmnElement="Gateway_MorePhases" isMarkerVisible="true"><dc:Bounds x="3745" y="165" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Verification" bpmnElement="Activity_Verification"><dc:Bounds x="3840" y="150" width="130" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Completion" bpmnElement="Activity_CompletionReview"><dc:Bounds x="4010" y="150" width="145" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Complete" bpmnElement="Event_Complete"><dc:Bounds x="4200" y="172" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_01" bpmnElement="Flow_01"><di:waypoint x="116" y="190"/><di:waypoint x="150" y="190"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_02" bpmnElement="Flow_02"><di:waypoint x="270" y="190"/><di:waypoint x="310" y="190"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_03" bpmnElement="Flow_03"><di:waypoint x="440" y="190"/><di:waypoint x="480" y="190"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_04" bpmnElement="Flow_04"><di:waypoint x="610" y="190"/><di:waypoint x="650" y="190"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_05" bpmnElement="Flow_05"><di:waypoint x="790" y="190"/><di:waypoint x="830" y="190"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_06" bpmnElement="Flow_06"><di:waypoint x="975" y="190"/><di:waypoint x="1015" y="190"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_07" bpmnElement="Flow_07"><di:waypoint x="1160" y="190"/><di:waypoint x="1200" y="190"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_08" bpmnElement="Flow_08"><di:waypoint x="1330" y="190"/><di:waypoint x="1370" y="190"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_09" bpmnElement="Flow_09"><di:waypoint x="1510" y="190"/><di:waypoint x="1550" y="190"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_10" bpmnElement="Flow_10"><di:waypoint x="1690" y="190"/><di:waypoint x="1730" y="190"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_11" bpmnElement="Flow_11"><di:waypoint x="1875" y="190"/><di:waypoint x="1915" y="190"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_12" bpmnElement="Flow_12"><di:waypoint x="2065" y="190"/><di:waypoint x="2105" y="190"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_13" bpmnElement="Flow_13"><di:waypoint x="2250" y="190"/><di:waypoint x="2290" y="190"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_14" bpmnElement="Flow_14"><di:waypoint x="2430" y="190"/><di:waypoint x="2470" y="190"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_15" bpmnElement="Flow_15"><di:waypoint x="2615" y="190"/><di:waypoint x="2655" y="190"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_15a" bpmnElement="Flow_15a"><di:waypoint x="2795" y="190"/><di:waypoint x="2835" y="190"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_15b" bpmnElement="Flow_15b"><di:waypoint x="2965" y="190"/><di:waypoint x="3005" y="190"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_16" bpmnElement="Flow_16"><di:waypoint x="3145" y="190"/><di:waypoint x="3190" y="190"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_17a" bpmnElement="Flow_17a"><di:waypoint x="3215" y="215"/><di:waypoint x="3215" y="300"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_17" bpmnElement="Flow_17"><di:waypoint x="3135" y="340"/><di:waypoint x="2178" y="340"/><di:waypoint x="2178" y="230"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_18" bpmnElement="Flow_18"><di:waypoint x="3240" y="190"/><di:waypoint x="3285" y="190"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_18a" bpmnElement="Flow_18a"><di:waypoint x="3430" y="190"/><di:waypoint x="3475" y="190"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_19" bpmnElement="Flow_19"><di:waypoint x="3500" y="165"/><di:waypoint x="3500" y="80"/><di:waypoint x="1802" y="80"/><di:waypoint x="1802" y="150"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_20" bpmnElement="Flow_20"><di:waypoint x="3525" y="190"/><di:waypoint x="3570" y="190"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_20a" bpmnElement="Flow_20a"><di:waypoint x="3700" y="190"/><di:waypoint x="3745" y="190"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_21" bpmnElement="Flow_21"><di:waypoint x="3770" y="215"/><di:waypoint x="3770" y="410"/><di:waypoint x="1620" y="410"/><di:waypoint x="1620" y="230"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_22" bpmnElement="Flow_22"><di:waypoint x="3795" y="190"/><di:waypoint x="3840" y="190"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_23" bpmnElement="Flow_23"><di:waypoint x="3970" y="190"/><di:waypoint x="4010" y="190"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_24" bpmnElement="Flow_24"><di:waypoint x="4155" y="190"/><di:waypoint x="4200" y="190"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -1,0 +1,29 @@
+# Recovery и компактный статус
+
+Recovery обязателен при новом invocation/session, context compaction, handoff или подозрении на потерю контекста.
+
+1. Запусти `state.py validate` и прочитай `STATE.yaml`.
+2. Прочитай `CURRENT_STATE.md`.
+3. Если active path задан, прочитай phase PLAN/CONTEXT и active component.
+4. Прочитай только `relevant_requirements`, `relevant_processes`, `relevant_decisions` из STATE.
+5. При Git выполни read-only `git status` и сравни с `git_baseline`/`last_checkpoint`.
+6. Запусти `validate_project.py`; ERROR блокирует мутацию до диагностики.
+7. Сопоставь `next_action` с gates и фактическим repository. Если расходятся, зафиксируй STATE DRIFT, не угадывай.
+
+`CURRENT_STATE.md` — короткий checkpoint, не журнал. Обновляй текущую цель, completed/current work, refs, constraints, blockers, last verification, next action и do-not. История остаётся в BUILD_LOG/Git.
+
+Покажи:
+
+```text
+PROJECT MASTER 2.0
+Проект: ...
+Стадия: ...
+Активная фаза: ...
+Активный компонент: ...
+Готово: ...
+Сейчас: ...
+Следующий шаг: ...
+Требуется решение пользователя: ...
+```
+
+Если решение не требуется, не задавай формальный вопрос — продолжай следующий approved шаг.
