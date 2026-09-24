@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="420" viewBox="0 0 1400 420" role="img" aria-labelledby="title description">
+  <title id="title">Project Master 2.0</title>
+  <desc id="description">Управление сложными проектами для Codex: от идеи до проверенного результата</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#071426"/>
+      <stop offset="0.55" stop-color="#172554"/>
+      <stop offset="1" stop-color="#3b0764"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#38bdf8"/>
+      <stop offset="0.52" stop-color="#818cf8"/>
+      <stop offset="1" stop-color="#c084fc"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#020617" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <rect width="1400" height="420" rx="28" fill="url(#background)"/>
+  <circle cx="1180" cy="-10" r="250" fill="#7c3aed" opacity="0.2" filter="url(#glow)"/>
+  <circle cx="160" cy="390" r="210" fill="#0284c7" opacity="0.18" filter="url(#glow)"/>
+  <path d="M0 335 C240 245 410 430 690 332 S1110 245 1400 322 V420 H0Z" fill="#ffffff" opacity="0.025"/>
+
+  <g transform="translate(76 62)">
+    <rect width="62" height="62" rx="16" fill="url(#accent)" filter="url(#shadow)"/>
+    <path d="M17 43V19h14c8 0 13 4 13 11S39 41 31 41h-6v8" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="47" cy="46" r="5" fill="#fff"/>
+  </g>
+
+  <text x="162" y="103" fill="#e0f2fe" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="25" font-weight="600" letter-spacing="4">CODEX SKILL</text>
+  <text x="76" y="205" fill="#ffffff" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="76" font-weight="750">Project Master <tspan fill="#c4b5fd">2.0</tspan></text>
+  <text x="79" y="254" fill="#bfdbfe" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="27">От идеи до проверенного результата — с памятью внутри repository</text>
+
+  <g transform="translate(80 317)" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="15" font-weight="650">
+    <g>
+      <rect width="142" height="44" rx="22" fill="#0c4a6e" stroke="#38bdf8" stroke-opacity="0.7"/>
+      <text x="71" y="28" text-anchor="middle" fill="#e0f2fe">DISCOVERY</text>
+    </g>
+    <path d="M153 22h40" stroke="#64748b" stroke-width="2"/><path d="m188 17 7 5-7 5" fill="none" stroke="#64748b" stroke-width="2"/>
+    <g transform="translate(204)">
+      <rect width="142" height="44" rx="22" fill="#312e81" stroke="#818cf8" stroke-opacity="0.8"/>
+      <text x="71" y="28" text-anchor="middle" fill="#e0e7ff">PROCESS</text>
+    </g>
+    <path d="M357 22h40" stroke="#64748b" stroke-width="2"/><path d="m392 17 7 5-7 5" fill="none" stroke="#64748b" stroke-width="2"/>
+    <g transform="translate(408)">
+      <rect width="170" height="44" rx="22" fill="#4c1d95" stroke="#a78bfa" stroke-opacity="0.85"/>
+      <text x="85" y="28" text-anchor="middle" fill="#ede9fe">ARCHITECTURE</text>
+    </g>
+    <path d="M589 22h40" stroke="#64748b" stroke-width="2"/><path d="m624 17 7 5-7 5" fill="none" stroke="#64748b" stroke-width="2"/>
+    <g transform="translate(640)">
+      <rect width="142" height="44" rx="22" fill="#581c87" stroke="#c084fc" stroke-opacity="0.85"/>
+      <text x="71" y="28" text-anchor="middle" fill="#f3e8ff">EXECUTION</text>
+    </g>
+    <path d="M793 22h40" stroke="#64748b" stroke-width="2"/><path d="m828 17 7 5-7 5" fill="none" stroke="#64748b" stroke-width="2"/>
+    <g transform="translate(844)">
+      <rect width="166" height="44" rx="22" fill="#064e3b" stroke="#34d399" stroke-opacity="0.85"/>
+      <text x="83" y="28" text-anchor="middle" fill="#d1fae5">VERIFICATION</text>
+    </g>
+  </g>
+
+  <g transform="translate(1152 272)" opacity="0.9">
+    <rect width="172" height="98" rx="20" fill="#0f172a" stroke="#64748b" stroke-opacity="0.55" filter="url(#shadow)"/>
+    <circle cx="31" cy="29" r="8" fill="#38bdf8"/>
+    <rect x="50" y="22" width="86" height="12" rx="6" fill="#64748b"/>
+    <circle cx="31" cy="52" r="8" fill="#818cf8"/>
+    <rect x="50" y="45" width="102" height="12" rx="6" fill="#64748b"/>
+    <circle cx="31" cy="75" r="8" fill="#34d399"/>
+    <rect x="50" y="68" width="70" height="12" rx="6" fill="#64748b"/>
+  </g>
+</svg>
