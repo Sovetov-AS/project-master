@@ -1,5 +1,5 @@
 interface:
-  display_name: "Project Master 2.0"
+  display_name: "Project Master 2.1"
   short_description: "Ведёт сложный проект от идеи до проверенной приёмки"
   default_prompt: "Используй $project-master, чтобы запустить или продолжить текущий проект."
 policy:

@@ -6,11 +6,17 @@ Stage: DISCOVERY
 
 Status: ACTIVE
 
+Profile: {{LIFECYCLE_PROFILE}}
+
 ## Active path
 
 Phase: —
 
 Component: —
+
+Change: —
+
+Routing: balanced_reasoning / medium
 
 ## Current objective
 

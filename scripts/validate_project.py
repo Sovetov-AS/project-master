@@ -20,7 +20,7 @@ REQUIRED_FILES = (
     "STATE.yaml", "CURRENT_STATE.md", "VISION.md", "CONSTITUTION.md",
     "REQUIREMENTS.md", "ARCHITECTURE.md", "ROADMAP.md", "TRACEABILITY.md",
     "RISKS.md", "OPEN_QUESTIONS.md", "BUILD_LOG.md", "processes/INDEX.md",
-    "processes/BPMN_GUIDE.md",
+    "processes/BPMN_GUIDE.md", "ROUTING.md", "state-events.jsonl",
 )
 REQUIRED_DIRS = (
     "processes/as-is", "processes/to-be", "processes/system", "decisions",
@@ -35,6 +35,10 @@ STAGE_ORDER = {
     "PROCESS_MODELING": 4, "ARCHITECTURE": 5, "ARCHITECTURE_REVIEW": 6,
     "ROADMAP": 7, "ROADMAP_REVIEW": 8, "EXECUTION": 9,
     "VERIFICATION": 10, "COMPLETION_REVIEW": 11, "COMPLETE": 12,
+}
+CHANGE_PACKAGE_FILES = {
+    "PROPOSAL.md", "REQUIREMENTS_DELTA.md", "PROCESS_DELTA.md",
+    "IMPACT.md", "PLAN.md", "VERIFICATION.md",
 }
 
 
@@ -75,6 +79,8 @@ def audit(root: Path) -> Tuple[List[str], List[str]]:
     try:
         data = pm_state.load_state(root)
         errors.extend(pm_state.validate_state(data))
+        errors.extend(pm_state.approval_integrity_errors(root, data))
+        errors.extend(pm_state.validate_event_log(root, data))
     except pm_state.StateError as exc:
         errors.append(str(exc))
         return errors, warnings
@@ -141,6 +147,28 @@ def audit(root: Path) -> Tuple[List[str], List[str]]:
     for approval, threshold in approval_thresholds.items():
         if order >= threshold and not data.get("approvals", {}).get(approval):
             errors.append(f"approval inconsistency: stage {stage} requires {approval}")
+    if data.get("lifecycle_profile") in {"QUICK", "STANDARD"}:
+        baseline = ("concept", "architecture", "roadmap")
+        missing = [area for area in baseline if not data.get("approvals", {}).get(area)]
+        if missing:
+            errors.append(
+                f"{data.get('lifecycle_profile')} profile requires approved baseline: {', '.join(missing)}"
+            )
+    change_ids: Set[str] = set()
+    for package in sorted((pm / "changes").glob("CHG-*-*")):
+        if not package.is_dir():
+            continue
+        match = re.match(r"(CHG-\d{3})-", package.name)
+        if not match:
+            errors.append(f"invalid change package name: {package.name}")
+            continue
+        change_ids.add(match.group(1))
+        missing_files = sorted(name for name in CHANGE_PACKAGE_FILES if not (package / name).is_file())
+        if missing_files:
+            errors.append(f"incomplete change package {match.group(1)}: {', '.join(missing_files)}")
+    active_change = data.get("active_change")
+    if active_change and active_change not in change_ids:
+        errors.append(f"STATE active_change does not exist: {active_change}")
     if stage == "EXECUTION" and not state_active:
         errors.append("EXECUTION requires exactly one ACTIVE component")
     if stage == "COMPLETE":

@@ -2,11 +2,11 @@
 name: project-master
 description: Управляет полным жизненным циклом сложного проекта с репозиторной памятью, human gates, BPMN, roadmap, поэтапной реализацией, recovery, проверкой и change control. Использовать для запуска, продолжения, планирования, реализации или аудита проекта, который ведётся через Project Master.
 metadata:
-  version: "2.0"
+  version: "2.1"
   short-description: Управление сложным проектом от идеи до приёмки
 ---
 
-# Project Master 2.0
+# Project Master 2.1
 
 Управляй проектом через `<PROJECT_ROOT>/.project-master/`. История разговора не является памятью. Глобальный skill — движок; никогда не сохраняй в нём состояние конкретного проекта.
 
@@ -15,7 +15,9 @@ metadata:
 1. Найди корень текущего проекта: ближайший родитель с `.project-master/`, иначе ближайший Git root, иначе текущий каталог.
 2. Без команды: если `.project-master/STATE.yaml` отсутствует — действуй как `start`; иначе как `resume`.
 3. Перед существенной работой запусти recovery по [recovery.md](references/recovery.md). Для новой идеи используй [discovery.md](references/discovery.md), затем [specification.md](references/specification.md).
-4. Загружай только reference текущего режима:
+4. Выбери минимально достаточный lifecycle profile по [adaptive-lifecycle.md](references/adaptive-lifecycle.md). Новый проект начинает с `FULL` или `CRITICAL`; `QUICK` и `STANDARD` допустимы только для изменений поверх неизменившегося approved baseline.
+5. Для нетривиальной работы запиши требуемую capability и effort по [model-routing.md](references/model-routing.md). Не закрепляй этапы за конкретными именами моделей.
+6. Загружай только reference текущего режима:
 
 | Команда | Действие | Reference |
 |---|---|---|
@@ -25,7 +27,7 @@ metadata:
 | архитектура | Проектировать после concept/process approvals | [architecture.md](references/architecture.md) |
 | roadmap | Декомпозировать после architecture approval | [roadmap.md](references/roadmap.md) |
 | выполнение | Работать только над одним ACTIVE component | [execution.md](references/execution.md) |
-| `change <description>` | Классифицировать correction/scope change | [change-control.md](references/change-control.md) |
+| `change <description>` | Создать change package и классифицировать correction/scope change | [change-control.md](references/change-control.md) |
 | `verify` | Проверить component/phase и сохранить evidence | [verification.md](references/verification.md) |
 | `audit`, `finish` | Найти drift или провести completion review | [completion-audit.md](references/completion-audit.md) |
 
@@ -35,6 +37,7 @@ metadata:
 - Не менять approved scope, requirements, BPMN, architecture или roadmap без Change Control.
 - Не иметь более одного ACTIVE component.
 - Не объявлять PASS/COMPLETE без сохранённого verification evidence.
+- Не считать approval действительным, если hash утверждённых артефактов изменился.
 - Не перезаписывать существующий `AGENTS.md`, `.project-master/` или ручные BPMN-изменения.
 - Не commit/push автоматически: `git_checkpoint_mode` по умолчанию `ask`; push всегда требует отдельного разрешения.
 - Все переходы состояния выполнять через `scripts/state.py`.
@@ -45,7 +48,9 @@ metadata:
 
 ```bash
 python3 scripts/init_project.py --root <PROJECT_ROOT> [--name NAME] [--idea TEXT]
+python3 scripts/migrate.py --root <PROJECT_ROOT> plan|apply
 python3 scripts/state.py --root <PROJECT_ROOT> show|validate|summary
+python3 scripts/change.py --root <PROJECT_ROOT> --title TITLE --description TEXT --kind CORRECTION|SCOPE_CHANGE
 python3 scripts/validate_project.py --root <PROJECT_ROOT>
 python3 scripts/validate_bpmn.py <FILE.bpmn>
 python3 scripts/traceability.py --root <PROJECT_ROOT> validate

@@ -2,7 +2,7 @@
 
 Recovery обязателен при новом invocation/session, context compaction, handoff или подозрении на потерю контекста.
 
-1. Запусти `state.py validate` и прочитай `STATE.yaml`.
+1. Запусти `state.py validate` и прочитай `STATE.yaml`. Validator должен подтвердить связь STATE с последним событием `state-events.jsonl` и актуальность approval hashes.
 2. Прочитай `CURRENT_STATE.md`.
 3. Если active path задан, прочитай phase PLAN/CONTEXT и active component.
 4. Прочитай только `relevant_requirements`, `relevant_processes`, `relevant_decisions` из STATE.
@@ -10,16 +10,18 @@ Recovery обязателен при новом invocation/session, context comp
 6. Запусти `validate_project.py`; ERROR блокирует мутацию до диагностики.
 7. Сопоставь `next_action` с gates и фактическим repository. Если расходятся, зафиксируй STATE DRIFT, не угадывай.
 
-`CURRENT_STATE.md` — короткий checkpoint, не журнал. Обновляй текущую цель, completed/current work, refs, constraints, blockers, last verification, next action и do-not. История остаётся в BUILD_LOG/Git.
+`CURRENT_STATE.md` — короткий checkpoint, не журнал. Обновляй текущую цель, completed/current work, refs, constraints, blockers, last verification, next action и do-not. История решений остаётся в append-only `state-events.jsonl`, BUILD_LOG и Git. Не редактируй старые event lines; исправление записывай новым событием.
 
 Покажи:
 
 ```text
-PROJECT MASTER 2.0
+PROJECT MASTER 2.1
 Проект: ...
 Стадия: ...
+Профиль: ...
 Активная фаза: ...
 Активный компонент: ...
+Активное изменение: ...
 Готово: ...
 Сейчас: ...
 Следующий шаг: ...

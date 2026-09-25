@@ -1,16 +1,32 @@
 {
-  "schema_version": "2.0",
-  "project_master_version": "2.0",
+  "schema_version": "2.1",
+  "project_master_version": "2.1",
   "project_id": "{{PROJECT_ID}}",
   "project_name": "{{PROJECT_NAME}}",
   "created_at": "{{CREATED_AT}}",
   "updated_at": "{{CREATED_AT}}",
   "stage": "DISCOVERY",
   "status": "ACTIVE",
+  "lifecycle_profile": "{{LIFECYCLE_PROFILE}}",
+  "profile_record": {
+    "profile": "{{LIFECYCLE_PROFILE}}",
+    "at": "{{CREATED_AT}}",
+    "source": "bootstrap",
+    "reason": "Initial project classification"
+  },
   "resume_stage": null,
   "active_phase": null,
   "active_component": null,
   "active_process": null,
+  "active_change": null,
+  "routing": {
+    "mode": "advisory",
+    "quality_profile": "balanced",
+    "required_capability": "balanced_reasoning",
+    "minimum_effort": "medium",
+    "reason": "Initial safe default; reassess per work package",
+    "selected_at": "{{CREATED_AT}}"
+  },
   "approvals": {
     "concept": false,
     "processes": false,
@@ -29,6 +45,7 @@
   "git_baseline": null,
   "last_checkpoint": null,
   "git_checkpoint_mode": "ask",
+  "event_log": ".project-master/state-events.jsonl",
   "state_history": [
     {
       "from": "NEW",

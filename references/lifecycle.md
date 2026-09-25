@@ -6,6 +6,8 @@ Project Master хранит машинное состояние в `.project-mas
 
 `BLOCKED` и `CHANGE_REVIEW` — контролируемые боковые состояния с `resume_stage`; возвращаться можно только через `state.py resolve`. Нельзя перескакивать gates.
 
+Основной путь обязателен для нового проекта. Для последующих change packages применяй profiles из [adaptive-lifecycle.md](adaptive-lifecycle.md): ускорение не аннулирует неизменившиеся hash-bound approvals и не разрешает обходить изменившиеся.
+
 ## Bootstrap
 
 1. Определи корень проекта и проверь существующие `.project-master/`, `AGENTS.md`, Git и Spec Kit.
@@ -23,7 +25,7 @@ Project Master хранит машинное состояние в `.project-mas
 - `ROADMAP_REVIEW`: показать фазы, компоненты, результаты, critical path, зависимости и риски.
 - `COMPLETION_REVIEW`: только после полного аудита; COMPLETE — только после явного completion approval.
 
-Не спрашивай повторно неизменившийся approval. Источник и момент approval сохраняй в `approval_records`.
+Не спрашивай повторно неизменившийся approval. Источник, момент, перечень артефактов и aggregate hash сохраняй в `approval_records`. Если hash изменился, approval считается stale независимо от boolean в STATE.
 
 ## Командная семантика
 

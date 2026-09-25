@@ -1,13 +1,14 @@
 <div align="center">
-  <img src="assets/project-master-banner.svg" alt="Project Master 2.0 — управление сложными проектами для Codex" width="100%">
+  <img src="assets/project-master-banner.svg" alt="Project Master 2.1 — управление сложными проектами для Codex" width="100%">
 </div>
 
 <p align="center">
   <a href="https://github.com/Sovetov-AS/project-master/actions/workflows/ci.yml"><img src="https://github.com/Sovetov-AS/project-master/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/version-2.0-7c3aed" alt="Version 2.0">
+  <img src="https://img.shields.io/badge/version-2.1-7c3aed" alt="Version 2.1">
   <img src="https://img.shields.io/badge/Python-3.9%2B-2563eb" alt="Python 3.9+">
   <img src="https://img.shields.io/badge/BPMN-2.0-0ea5e9" alt="BPMN 2.0">
   <img src="https://img.shields.io/badge/language-Русский-f97316" alt="Русский язык">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e" alt="MIT License"></a>
 </p>
 
 <p align="center">
@@ -15,7 +16,7 @@
 </p>
 
 <p align="center">
-  Репозиторная память · Human gates · BPMN · Architecture Decisions · Roadmap · Recovery · Verification
+  Репозиторная память · Adaptive lifecycle · Human gates · BPMN · Recovery · Verification
 </p>
 
 ---
@@ -30,8 +31,12 @@ Project Master переносит память проекта из разгов�
 - фиксирует требования со стабильными ID;
 - моделирует процессы в BPMN 2.0;
 - отделяет утверждение концепции, процессов, архитектуры и roadmap;
+- связывает approvals с hash утверждённых артефактов, поэтому скрытый drift делает approval недействительным;
+- выбирает `QUICK`, `STANDARD`, `FULL` или `CRITICAL` workflow по риску изменения;
+- фиксирует требуемую capability модели без жёсткой привязки к быстро устаревающим именам моделей;
 - разрешает только один активный component одновременно;
 - восстанавливает контекст после новой сессии или compaction;
+- ведёт append-only журнал изменения состояния;
 - обнаруживает requirement, process, architecture, implementation и state drift;
 - не объявляет работу завершённой без verification evidence.
 
@@ -63,6 +68,17 @@ flowchart LR
 ```
 
 Полная редактируемая диаграмма включена в skill: [`PM-001-project-master-lifecycle.bpmn`](assets/templates/PM-001-project-master-lifecycle.bpmn).
+
+### Адаптивные профили
+
+| Profile | Для чего | Что нельзя пропустить |
+|---|---|---|
+| `QUICK` | Локальная correction в утверждённом проекте | Change package, targeted tests, неизменившийся approved baseline |
+| `STANDARD` | Ограниченное изменение процесса или компонента | Delta/impact analysis и повторное approval затронутых областей |
+| `FULL` | Новый проект, subsystem или существенный scope change | Полный lifecycle и human gates |
+| `CRITICAL` | Security, деньги, персональные данные, необратимые миграции | `FULL` + независимый review, rollback и усиленное evidence |
+
+Новый проект всегда начинает с `FULL` или `CRITICAL`. Быстрые профили работают только поверх существующего approved baseline и не превращаются в способ обойти архитектуру.
 
 ## Быстрый старт
 
@@ -108,6 +124,7 @@ $HOME/.agents/skills/project-master/     <PROJECT_ROOT>/.project-master/
 │ references/                     │     │ CURRENT_STATE.md                │
 │ scripts/                        │     │ REQUIREMENTS.md                 │
 │ assets/templates/               │     │ processes/*.bpmn               │
+│                                 │     │ state-events.jsonl              │
 │                                 │     │ ARCHITECTURE.md + ADR           │
 │ Общий движок для всех проектов  │     │ ROADMAP + phases + components   │
 └─────────────────────────────────┘     └─────────────────────────────────┘
@@ -126,7 +143,7 @@ Project-specific state никогда не хранится в глобальн�
 | `$project-master next` | Выполняет следующий разрешённый шаг |
 | `$project-master process list` | Показывает процессы и расхождения BPMN/sidecar |
 | `$project-master process sync PROC-001` | Синхронизирует изменённую вручную BPMN-модель |
-| `$project-master change <description>` | Создаёт предложение изменения scope |
+| `$project-master change <description>` | Создаёт полный change package и выбирает профиль |
 | `$project-master verify` | Проверяет active component или phase |
 | `$project-master audit` | Ищет drift между источниками истины |
 | `$project-master finish` | Запускает completion review, но не обходит approval |
@@ -142,7 +159,13 @@ Project Master не начинает реализацию только пото�
 5. Scope Change Approval — только если меняется утверждённый scope
 6. Project Completion Approval
 
-Повторное подтверждение не требуется, пока утверждённый предмет не изменился.
+Повторное подтверждение не требуется, пока утверждённый предмет не изменился. Каждый approval хранит SHA-256 snapshot связанных артефактов; при изменении validator помечает его как stale и требует повторного решения.
+
+## Экономия токенов без потери контроля
+
+Project Master маршрутизирует работу по capability: `mechanical`, `balanced_reasoning`, `deep_reasoning` или `independent_review`. В STATE сохраняются минимальный effort, quality profile и причина выбора, но не постоянное имя модели.
+
+Такой подход переживает обновления модельной линейки и не выдаёт рекомендацию за фактическое переключение. Более сильный route включается при конфликтующих требованиях, повторных failures, security/permissions, миграциях и высоком consequence. Для механических задач достаточно дешёвого route при наличии детерминированной проверки.
 
 ## BPMN как source of truth
 
@@ -170,6 +193,7 @@ Project Master проверит XML и ссылки, определит изме
 | Артефакт | Отвечает за |
 |---|---|
 | `STATE.yaml` | Машинное состояние и текущий active path |
+| `state-events.jsonl` | Append-only история переходов и hash каждого состояния |
 | `VISION.md` | Проблему, цель и ожидаемый результат |
 | `REQUIREMENTS.md` | Утверждённые функциональные и нефункциональные требования |
 | `*.bpmn` | Последовательность действий внутри процессов |
@@ -178,6 +202,7 @@ Project Master проверит XML и ссылки, определит изме
 | `ROADMAP.md` | Декомпозицию проекта на phases и components |
 | Component file | Контракт конкретной реализации |
 | Tests / evidence | Доказательство выполнения |
+| `changes/CHG-*/` | Proposal, deltas, impact, plan и verification отдельного изменения |
 
 Если источники противоречат друг другу, Project Master не выбирает победителя молча: конфликт фиксируется и при необходимости проходит Change Control.
 
@@ -196,6 +221,7 @@ RECOVER → LOAD CONTRACT → UNDERSTAND → IMPLEMENT
 - Не более одного ACTIVE component.
 - Никакого COMPLETE без сохранённого evidence.
 - Scope change не реализуется автоматически.
+- Stale approval не открывает следующий gate, даже если boolean остался `true`.
 - Существующий `AGENTS.md` не перезаписывается.
 - Существующая `.project-master/` не уничтожается.
 - Commit зависит от `git_checkpoint_mode`; push всегда требует отдельного разрешения.
@@ -212,6 +238,8 @@ project-master/
 ├── agents/openai.yaml
 ├── references/
 │   ├── lifecycle.md
+│   ├── adaptive-lifecycle.md
+│   ├── model-routing.md
 │   ├── discovery.md
 │   ├── specification.md
 │   ├── process-modeling.md
@@ -224,6 +252,8 @@ project-master/
 │   └── completion-audit.md
 ├── scripts/
 │   ├── init_project.py
+│   ├── migrate.py
+│   ├── change.py
 │   ├── state.py
 │   ├── validate_project.py
 │   ├── validate_bpmn.py
@@ -244,7 +274,7 @@ python3 scripts/validate_bpmn.py \
   assets/templates/PM-001-project-master-lifecycle.bpmn
 ```
 
-Тестовый набор проверяет 15 сценариев: state gates, recovery, изоляцию проектов, единственный ACTIVE component, сохранение `AGENTS.md`, BPMN sync detection, evidence gate, Change Review и Completion Review.
+Тестовый набор проверяет поведение state gates, recovery, approval drift, append-only events, lifecycle profiles, capability routing, change packages, изоляцию проектов, BPMN sync и evidence gates.
 
 Если `bpmnlint` доступен локально, `validate_bpmn.py` добавляет semantic lint. Без него basic validation продолжает работать и явно сообщает `SEMANTIC LINT NOT AVAILABLE`.
 
@@ -263,9 +293,28 @@ python3 "$HOME/.agents/skills/project-master/scripts/init_project.py" \
   --upgrade-plan
 ```
 
+Для state schema 2.0 доступна явная миграция с резервной копией:
+
+```bash
+python3 "$HOME/.agents/skills/project-master/scripts/migrate.py" \
+  --root /path/to/project plan
+python3 "$HOME/.agents/skills/project-master/scripts/migrate.py" \
+  --root /path/to/project apply
+```
+
+Если в 2.0 уже были approvals, apply потребует дополнительный флаг `--accept-current-approved-artifacts`. Он означает, что вы просмотрели текущие артефакты и принимаете их как hash baseline; без этого миграция не легализует старые approvals молча.
+
+## Лицензия и автор
+
+Project Master распространяется бесплатно по [MIT License](LICENSE). Вы можете использовать, изменять и распространять его, включая коммерческие проекты, при сохранении copyright notice:
+
+**Copyright © 2026 Andrey Sovetov.**
+
+История выпусков: [CHANGELOG.md](CHANGELOG.md).
+
 ---
 
 <p align="center">
-  <strong>Project Master 2.0</strong><br>
+  <strong>Project Master 2.1</strong><br>
   Сложный проект должен переживать потерю контекста — и всё равно оставаться управляемым.
 </p>

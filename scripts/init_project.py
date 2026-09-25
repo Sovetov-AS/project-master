@@ -15,7 +15,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 
-VERSION = "2.0"
+import state as pm_state
+
+VERSION = "2.1"
 MANAGED_START = "<!-- project-master:start -->"
 MANAGED_END = "<!-- project-master:end -->"
 MANAGED_SECTION = """<!-- project-master:start -->
@@ -30,7 +32,7 @@ MANAGED_SECTION = """<!-- project-master:start -->
 ROOT_TEMPLATES = (
     "STATE.yaml", "CURRENT_STATE.md", "VISION.md", "CONSTITUTION.md",
     "REQUIREMENTS.md", "ARCHITECTURE.md", "ROADMAP.md", "TRACEABILITY.md",
-    "RISKS.md", "OPEN_QUESTIONS.md", "BUILD_LOG.md",
+    "RISKS.md", "OPEN_QUESTIONS.md", "BUILD_LOG.md", "ROUTING.md",
 )
 
 
@@ -57,6 +59,7 @@ def planned_paths(root: Path) -> List[Path]:
     pm = root / ".project-master"
     paths = [pm / name for name in ROOT_TEMPLATES]
     paths += [
+        pm / "state-events.jsonl",
         pm / "processes" / "INDEX.md",
         pm / "processes" / "BPMN_GUIDE.md",
         pm / "processes" / "system" / "PM-001-project-master-lifecycle.bpmn",
@@ -111,10 +114,13 @@ def upgrade_plan(root: Path) -> int:
     print("3. Diff templates and merge project-owned content instead of replacing it.")
     print("4. Validate BPMN pairs, traceability, approvals, and active component.")
     print("5. Request explicit approval before applying the migration.")
+    if current == "2.0":
+        print("Apply with: python3 scripts/migrate.py --root <PROJECT_ROOT> apply")
+        print("If approvals exist, add --accept-current-approved-artifacts after reviewing current files.")
     return 0
 
 
-def initialize(root: Path, name: str, idea: str, dry_run: bool) -> int:
+def initialize(root: Path, name: str, idea: str, profile: str, dry_run: bool) -> int:
     root = root.resolve()
     if not root.is_dir():
         raise RuntimeError(f"project root does not exist: {root}")
@@ -132,6 +138,7 @@ def initialize(root: Path, name: str, idea: str, dry_run: bool) -> int:
         "PROJECT_NAME": name,
         "CREATED_AT": timestamp,
         "IDEA": idea.strip() or "`TBD — получить исходную идею в Discovery.`",
+        "LIFECYCLE_PROFILE": profile,
     }
     if dry_run:
         print("DRY RUN: would create")
@@ -156,7 +163,7 @@ def initialize(root: Path, name: str, idea: str, dry_run: bool) -> int:
 
 Process ID: PM-001
 
-Name: Жизненный цикл Project Master 2.0
+Name: Жизненный цикл Project Master 2.1
 
 Status: APPROVED
 
@@ -199,9 +206,10 @@ Status: APPROVED
 
 | ID | Name | Category | Status | BPMN | Sidecar |
 |---|---|---|---|---|---|
-| PM-001 | Жизненный цикл Project Master 2.0 | system | APPROVED | [diagram](system/PM-001-project-master-lifecycle.bpmn) | [details](system/PM-001-project-master-lifecycle.md) |
+| PM-001 | Жизненный цикл Project Master 2.1 | system | APPROVED | [diagram](system/PM-001-project-master-lifecycle.bpmn) | [details](system/PM-001-project-master-lifecycle.md) |
 """
     write_new(pm / "processes" / "INDEX.md", index)
+    pm_state.initialize_event_log(root, pm_state.load_state(root))
     agents_result = update_agents(root, dry_run=False)
     print(f"PASS: initialized {pm}")
     print(f"PASS: {agents_result}")
@@ -213,6 +221,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--name")
     parser.add_argument("--idea", default="")
+    parser.add_argument("--profile", choices=("FULL", "CRITICAL"), default="FULL",
+                        help="New projects use the full lifecycle; CRITICAL adds independent review")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--upgrade-plan", action="store_true")
     return parser
@@ -223,7 +233,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     try:
         if args.upgrade_plan:
             return upgrade_plan(args.root.resolve())
-        return initialize(args.root, args.name or args.root.resolve().name, args.idea, args.dry_run)
+        return initialize(args.root, args.name or args.root.resolve().name, args.idea, args.profile, args.dry_run)
     except (OSError, RuntimeError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
