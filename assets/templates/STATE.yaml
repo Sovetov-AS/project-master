@@ -1,6 +1,6 @@
 {
-  "schema_version": "2.1",
-  "project_master_version": "2.1",
+  "schema_version": "3.0",
+  "project_master_version": "3.0",
   "project_id": "{{PROJECT_ID}}",
   "project_name": "{{PROJECT_NAME}}",
   "created_at": "{{CREATED_AT}}",

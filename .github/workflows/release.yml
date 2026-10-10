@@ -1,0 +1,31 @@
+name: Publish Project Master release
+
+on:
+  push:
+    tags: ["v3.0.0"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Validate release before publication
+        run: |
+          python -m unittest discover -s tests
+          python -m py_compile scripts/*.py tests/*.py
+          python scripts/workflow.py validate assets/templates/WORKFLOW-plugin-example.drawio --strict
+      - name: Create GitHub release from verified tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: >-
+          gh release create "$RELEASE_TAG" --verify-tag
+          --title "Project Master 3.0 — цель, память и полезный MVP"
+          --notes-file .github/RELEASE-3.0.md

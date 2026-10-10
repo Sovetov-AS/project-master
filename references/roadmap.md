@@ -1,6 +1,6 @@
 # Roadmap
 
-После architecture approval декомпозируй `PROJECT → PHASE → COMPONENT`.
+Декомпозируй ближайший increment: PROJECT → PHASE → COMPONENT. В STANDARD начни с одного полезного сценария; дальние направления сохрани в MISSION без подробной декомпозиции будущего приложения. FULL/CRITICAL — после architecture review.
 
 Phase имеет самостоятельную цель и проверяемый результат. Component — минимальная разумная единица, которую можно понять, реализовать, протестировать и принять. IDs: `P01`, `P01-C01`. Для каждой фазы создай `phases/PXX-slug/PLAN.md`, `CONTEXT.md` и `components/CXX-slug.md` из templates.
 

@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="420" viewBox="0 0 1400 420" role="img" aria-labelledby="title description">
-  <title id="title">Project Master 2.1</title>
+  <title id="title">Project Master 3.0</title>
   <desc id="description">Управление сложными проектами для Codex: от идеи до проверенного результата</desc>
   <defs>
     <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
@@ -32,33 +32,33 @@
   </g>
 
   <text x="162" y="103" fill="#e0f2fe" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="25" font-weight="600" letter-spacing="4">CODEX SKILL</text>
-  <text x="76" y="205" fill="#ffffff" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="76" font-weight="750">Project Master <tspan fill="#c4b5fd">2.1</tspan></text>
-  <text x="79" y="254" fill="#bfdbfe" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="27">От идеи до проверенного результата — с памятью внутри repository</text>
+  <text x="76" y="205" fill="#ffffff" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="76" font-weight="750">Project Master <tspan fill="#c4b5fd">3.0</tspan></text>
+  <text x="79" y="254" fill="#bfdbfe" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="27">От полезного MVP к продукту — с памятью цели и личного опыта</text>
 
   <g transform="translate(80 317)" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="15" font-weight="650">
     <g>
       <rect width="142" height="44" rx="22" fill="#0c4a6e" stroke="#38bdf8" stroke-opacity="0.7"/>
-      <text x="71" y="28" text-anchor="middle" fill="#e0f2fe">DISCOVERY</text>
+      <text x="71" y="28" text-anchor="middle" fill="#e0f2fe">GOAL</text>
     </g>
     <path d="M153 22h40" stroke="#64748b" stroke-width="2"/><path d="m188 17 7 5-7 5" fill="none" stroke="#64748b" stroke-width="2"/>
     <g transform="translate(204)">
       <rect width="142" height="44" rx="22" fill="#312e81" stroke="#818cf8" stroke-opacity="0.8"/>
-      <text x="71" y="28" text-anchor="middle" fill="#e0e7ff">PROCESS</text>
+      <text x="71" y="28" text-anchor="middle" fill="#e0e7ff">USEFUL MVP</text>
     </g>
     <path d="M357 22h40" stroke="#64748b" stroke-width="2"/><path d="m392 17 7 5-7 5" fill="none" stroke="#64748b" stroke-width="2"/>
     <g transform="translate(408)">
       <rect width="170" height="44" rx="22" fill="#4c1d95" stroke="#a78bfa" stroke-opacity="0.85"/>
-      <text x="85" y="28" text-anchor="middle" fill="#ede9fe">ARCHITECTURE</text>
+      <text x="85" y="28" text-anchor="middle" fill="#ede9fe">REAL TEST</text>
     </g>
     <path d="M589 22h40" stroke="#64748b" stroke-width="2"/><path d="m624 17 7 5-7 5" fill="none" stroke="#64748b" stroke-width="2"/>
     <g transform="translate(640)">
       <rect width="142" height="44" rx="22" fill="#581c87" stroke="#c084fc" stroke-opacity="0.85"/>
-      <text x="71" y="28" text-anchor="middle" fill="#f3e8ff">EXECUTION</text>
+      <text x="71" y="28" text-anchor="middle" fill="#f3e8ff">FEEDBACK</text>
     </g>
     <path d="M793 22h40" stroke="#64748b" stroke-width="2"/><path d="m828 17 7 5-7 5" fill="none" stroke="#64748b" stroke-width="2"/>
     <g transform="translate(844)">
       <rect width="166" height="44" rx="22" fill="#064e3b" stroke="#34d399" stroke-opacity="0.85"/>
-      <text x="83" y="28" text-anchor="middle" fill="#d1fae5">VERIFICATION</text>
+      <text x="83" y="28" text-anchor="middle" fill="#d1fae5">NEXT INCREMENT</text>
     </g>
   </g>
 

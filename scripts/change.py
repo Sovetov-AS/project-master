@@ -47,6 +47,8 @@ def render(text: str, values: Dict[str, str]) -> str:
 def ensure_profile_allowed(root: Path, data: Dict[str, object], profile: str) -> None:
     if profile not in pm_state.LIFECYCLE_PROFILES:
         raise pm_state.StateError(f"unknown lifecycle profile: {profile}")
+    if data.get("schema_version") == "3.0":
+        return
     if profile not in {"QUICK", "STANDARD"}:
         return
     baseline = ("concept", "architecture", "roadmap")
@@ -58,13 +60,17 @@ def ensure_profile_allowed(root: Path, data: Dict[str, object], profile: str) ->
         )
 
 
-def create(root: Path, title: str, description: str, kind: str, profile: Optional[str], source: str) -> Path:
+@pm_state.serialized
+def create(root: Path, title: str, description: str, kind: str, profile: Optional[str], source: str,
+           authorized_scope: bool = False) -> Path:
     root = root.resolve()
     data = pm_state.load_state(root)
     pm_state.ensure_event_log_current(root, data)
     if data.get("stage") in pm_state.SIDE_STAGES:
         raise pm_state.StateError(f"resolve current side stage before creating a change: {data.get('stage')}")
     selected_profile = profile or ("QUICK" if kind == "CORRECTION" else "STANDARD")
+    if authorized_scope and data.get("schema_version") == "3.0" and (source == "user request" or not source.strip()):
+        raise pm_state.StateError("--authorized-scope requires a concrete current owner decision source")
     ensure_profile_allowed(root, data, selected_profile)
     changes = pm_state.project_dir(root) / "changes"
     changes.mkdir(parents=True, exist_ok=True)
@@ -84,7 +90,11 @@ def create(root: Path, title: str, description: str, kind: str, profile: Optiona
     }
     temporary = Path(tempfile.mkdtemp(prefix=f".{change_id}-", dir=str(changes)))
     try:
-        for output, template in TEMPLATES.items():
+        selected = TEMPLATES
+        if data.get("schema_version") == "3.0" and selected_profile in {"QUICK", "STANDARD"}:
+            selected = {key: value for key, value in TEMPLATES.items() if key in {"PROPOSAL.md", "VERIFICATION.md"}}
+            pm_state.atomic_write(temporary / "FORMAT-3.0", "3.0 compact change: proposal includes scope, impact and plan\n")
+        for output, template in selected.items():
             text = render((templates / template).read_text(encoding="utf-8"), values)
             pm_state.atomic_write(temporary / output, text)
         os.replace(str(temporary), str(target))
@@ -103,12 +113,14 @@ def create(root: Path, title: str, description: str, kind: str, profile: Optiona
         f"Review and approve {change_id} before changing approved sources of truth."
         if kind == "SCOPE_CHANGE" else f"Implement {change_id} within the unchanged approved baseline."
     )
+    if authorized_scope and data.get("schema_version") == "3.0":
+        data["next_action"] = f"Implement {change_id} within the recorded owner request; verify affected contracts."
     pm_state.save_state(root, data, "change.created", {
         "change_id": change_id, "kind": kind, "profile": selected_profile,
         "path": target.relative_to(pm_state.project_dir(root)).as_posix(),
         "profile_before": old_profile, "source": source,
     })
-    if kind == "SCOPE_CHANGE":
+    if kind == "SCOPE_CHANGE" and not (authorized_scope and data.get("schema_version") == "3.0"):
         pm_state.transition(root, "CHANGE_REVIEW", f"{change_id} requires scope approval", data["next_action"])
     return target
 
@@ -121,13 +133,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--kind", choices=("CORRECTION", "SCOPE_CHANGE"), required=True)
     parser.add_argument("--profile", choices=pm_state.LIFECYCLE_PROFILES)
     parser.add_argument("--source", default="user request")
+    parser.add_argument("--authorized-scope", action="store_true", help="Record already explicit current owner scope authorization, not live-operation permission")
     return parser
 
 
 def main(argv: Optional[List[str]] = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        target = create(args.root, args.title, args.description, args.kind, args.profile, args.source)
+        target = create(args.root, args.title, args.description, args.kind, args.profile, args.source, args.authorized_scope)
         print(f"PASS: created {target}")
         return 0
     except (OSError, pm_state.StateError) as exc:

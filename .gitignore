@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.project-master/
+.project-master-backups/
+.venv/
+.DS_Store

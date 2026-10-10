@@ -2,6 +2,19 @@
 
 All notable changes to Project Master are documented here.
 
+## 3.0.0 — 2026-10-10
+
+- Goal-first recovery and private, revisioned BUILD/OPERATE mission memory.
+- Small useful MVP increments with explicit checks, expansion seams and deferred scope.
+- Project-local learning from user expertise, feedback and measured outcomes; no cross-user transfer.
+- Lean STANDARD bootstrap; optional BPMN and scoped action stops instead of blanket feature limits.
+- Editable drawio product-interaction contracts, handoff checks, bounded retry and authorization-path validation.
+- Compact scope-change packages, current-owner-request authorization and progress-aware plan snapshots.
+- State writer locks, stale revision rejection, write-ahead recovery and hashed verification evidence.
+- Explicit backed-up 2.1 to 3.0 upgrade preserving project content, approval provenance and event history.
+- Backward-compatible 2.1 engine paths and expanded acceptance/migration/recovery tests.
+- Refreshed Russian documentation and branding; MIT attribution to Andrey Sovetov retained.
+
 ## 2.1 — 2026-09-25
 
 - Added adaptive `QUICK`, `STANDARD`, `FULL`, and `CRITICAL` lifecycle profiles.

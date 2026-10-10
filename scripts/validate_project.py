@@ -15,6 +15,8 @@ sys.path.insert(0, str(SCRIPT_DIR))
 import state as pm_state  # noqa: E402
 import traceability as pm_trace  # noqa: E402
 import validate_bpmn as pm_bpmn  # noqa: E402
+import mission  # noqa: E402
+import workflow  # noqa: E402
 
 REQUIRED_FILES = (
     "STATE.yaml", "CURRENT_STATE.md", "VISION.md", "CONSTITUTION.md",
@@ -68,10 +70,17 @@ def audit(root: Path) -> Tuple[List[str], List[str]]:
     warnings: List[str] = []
     if not pm.is_dir():
         return [f"project memory missing: {pm}"], warnings
-    for relative in REQUIRED_FILES:
+    try:
+        schema = pm_state.load_state(root).get("schema_version") if (pm / "STATE.yaml").is_file() else None
+    except pm_state.StateError as exc:
+        return [str(exc)], warnings
+    optional = {"ARCHITECTURE.md", "RISKS.md", "OPEN_QUESTIONS.md", "ROUTING.md"}
+    required_files = REQUIRED_FILES if schema != "3.0" else tuple(name for name in REQUIRED_FILES if not name.startswith("processes/") and name not in optional)
+    for relative in required_files:
         if not (pm / relative).is_file():
             errors.append(f"missing required file: {relative}")
-    for relative in REQUIRED_DIRS:
+    required_dirs = REQUIRED_DIRS if schema != "3.0" else ("decisions", "phases", "changes", "reviews", "workflows")
+    for relative in required_dirs:
         if not (pm / relative).is_dir():
             errors.append(f"missing required directory: {relative}")
     if errors and not (pm / "STATE.yaml").is_file():
@@ -84,9 +93,9 @@ def audit(root: Path) -> Tuple[List[str], List[str]]:
     except pm_state.StateError as exc:
         errors.append(str(exc))
         return errors, warnings
-    if data.get("schema_version") != pm_state.VERSION:
+    if data.get("schema_version") not in pm_state.SUPPORTED_SCHEMAS:
         errors.append(f"unsupported schema_version: {data.get('schema_version')}; migration required")
-    if data.get("project_master_version") != pm_state.VERSION:
+    if data.get("project_master_version") not in pm_state.SUPPORTED_SCHEMAS:
         warnings.append(f"project_master_version is {data.get('project_master_version')}; engine is {pm_state.VERSION}")
     requirement_ids = text_ids(pm / "REQUIREMENTS.md", REQ_RE)
     process_ids: Set[str] = set()
@@ -144,10 +153,23 @@ def audit(root: Path) -> Tuple[List[str], List[str]]:
     stage = data.get("stage")
     order = STAGE_ORDER.get(data.get("resume_stage"), -1) if stage in pm_state.SIDE_STAGES else STAGE_ORDER.get(stage, -1)
     approval_thresholds = {"concept": 4, "processes": 5, "architecture": 7, "roadmap": 9}
+    if schema == "3.0":
+        approval_thresholds = {"roadmap": 9} if data.get("lifecycle_profile") in {"QUICK", "STANDARD"} else {"concept": 4, "architecture": 7, "roadmap": 9}
+        try:
+            mission.load(root)
+        except (mission.MissionError, OSError) as exc:
+            errors.append(f"mission: {exc}")
+        for path in sorted((pm / "workflows").glob("*.drawio")):
+            try:
+                map_errors, map_warnings = workflow.validate(workflow.load_contract(path), root)
+                errors.extend(f"{path.name}: {item}" for item in map_errors)
+                warnings.extend(f"{path.name}: {item}" for item in map_warnings)
+            except (ValueError, OSError) as exc:
+                errors.append(f"{path.name}: {exc}")
     for approval, threshold in approval_thresholds.items():
         if order >= threshold and not data.get("approvals", {}).get(approval):
             errors.append(f"approval inconsistency: stage {stage} requires {approval}")
-    if data.get("lifecycle_profile") in {"QUICK", "STANDARD"}:
+    if schema != "3.0" and data.get("lifecycle_profile") in {"QUICK", "STANDARD"}:
         baseline = ("concept", "architecture", "roadmap")
         missing = [area for area in baseline if not data.get("approvals", {}).get(area)]
         if missing:
@@ -163,7 +185,8 @@ def audit(root: Path) -> Tuple[List[str], List[str]]:
             errors.append(f"invalid change package name: {package.name}")
             continue
         change_ids.add(match.group(1))
-        missing_files = sorted(name for name in CHANGE_PACKAGE_FILES if not (package / name).is_file())
+        required_change = {"PROPOSAL.md", "VERIFICATION.md"} if (package / "FORMAT-3.0").is_file() else CHANGE_PACKAGE_FILES
+        missing_files = sorted(name for name in required_change if not (package / name).is_file())
         if missing_files:
             errors.append(f"incomplete change package {match.group(1)}: {', '.join(missing_files)}")
     active_change = data.get("active_change")
@@ -172,11 +195,18 @@ def audit(root: Path) -> Tuple[List[str], List[str]]:
     if stage == "EXECUTION" and not state_active:
         errors.append("EXECUTION requires exactly one ACTIVE component")
     if stage == "COMPLETE":
+        if state_active or active_components:
+            errors.append("COMPLETE requires no ACTIVE component")
         if not data.get("approvals", {}).get("completion"):
             errors.append("COMPLETE without completion approval")
         verification = data.get("last_verification") or {}
         if verification.get("outcome") != "VERIFIED":
             errors.append("COMPLETE without VERIFIED project evidence")
+        errors.extend(pm_state.verification_errors(root, verification, schema == "3.0"))
+        if state_phase:
+            for path in (pm / "phases").glob(f"{state_phase}-*/components/C*.md"):
+                if pm_state.component_status(path) not in {"COMPLETE", "SUPERSEDED"}:
+                    errors.append(f"COMPLETE with unfinished current-phase contract: {path.name}")
         final_review = pm / "reviews" / "final-review.md"
         if not final_review.is_file():
             errors.append("COMPLETE without reviews/final-review.md")
@@ -190,8 +220,6 @@ def audit(root: Path) -> Tuple[List[str], List[str]]:
         content = agents.read_text(encoding="utf-8")
         if content.count("<!-- project-master:start -->") != 1 or content.count("<!-- project-master:end -->") != 1:
             errors.append("AGENTS.md managed section markers are missing or duplicated")
-    if not errors and not warnings:
-        warnings.append("no drift detected by structural validators; semantic audit still requires Codex review")
     return errors, warnings
 
 
@@ -216,6 +244,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"RESULT: WARNING ({len(warnings)} warnings)")
         return 1 if args.strict else 0
     print("RESULT: PASS")
+    print("LIMIT: structural checks are not semantic review or business acceptance")
     return 0
 
 

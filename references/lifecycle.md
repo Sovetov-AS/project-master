@@ -1,35 +1,24 @@
-# Lifecycle и команды
+# Lifecycle 3.0
 
-Project Master хранит машинное состояние в `.project-master/STATE.yaml`. Разрешённый основной путь:
+STANDARD / QUICK: `DISCOVERY → SPECIFICATION → ROADMAP → ROADMAP_REVIEW → EXECUTION ↔ VERIFICATION → COMPLETION_REVIEW → COMPLETE`.
 
-`NEW → DISCOVERY → SPECIFICATION → CONCEPT_REVIEW → PROCESS_MODELING → ARCHITECTURE → ARCHITECTURE_REVIEW → ROADMAP → ROADMAP_REVIEW → EXECUTION ↔ VERIFICATION → COMPLETION_REVIEW → COMPLETE`.
+Одна рассмотренная цель и план ближайшего инкремента вместо четырёх обязательных reviews. Запрос владельца может быть источником решения: не требуй дополнительную формулу, если границы и проверка ясны. Не отмечай придуманную спецификацию approved. Bootstrap MISSION содержит NEEDS_REVIEW: сначала замени неизвестные реальными данными через mission.py revise, затем утверди roadmap.
 
-`BLOCKED` и `CHANGE_REVIEW` — контролируемые боковые состояния с `resume_stage`; возвращаться можно только через `state.py resolve`. Нельзя перескакивать gates.
+FULL / CRITICAL сохраняют concept, архитектурный и roadmap reviews. Между CONCEPT_REVIEW и ARCHITECTURE можно выбрать PROCESS_MODELING, когда бизнес-процесс нужен; BPMN не обязателен. CRITICAL — профиль рискованного пакета, не всех задач проекта навсегда. Legacy 2.1 сохраняет прежние gates до upgrade.
 
-Основной путь обязателен для нового проекта. Для последующих change packages применяй profiles из [adaptive-lifecycle.md](adaptive-lifecycle.md): ускорение не аннулирует неизменившиеся hash-bound approvals и не разрешает обходить изменившиеся.
+BLOCKED и CHANGE_REVIEW имеют resume_stage. Глобальный BLOCKED — только если остановлен весь текущий путь. Для локального STOP state.py block --scope <action/node> с основанием и resume condition; стадия всего проекта не меняется.
 
-## Bootstrap
+## Запуск
 
-1. Определи корень проекта и проверь существующие `.project-master/`, `AGENTS.md`, Git и Spec Kit.
-2. Выполни `init_project.py --root ...`. Без `--force` скрипт не перезаписывает память.
-3. Проверь `validate_project.py`; INITIAL warnings допустимы, ERROR — нет.
-4. Перейди к Discovery. `start <idea>` сохраняет идею в `VISION.md`, но не превращает гипотезы в approved facts.
+1. Исследуй систему, AGENTS, Git и память; не переписывай готовое решение.
+2. init_project.py создаёт 3.0 STANDARD, private MISSION, checkpoint и журнал. Не копирует lifecycle BPMN. Шаблоны архитектуры/требований/рисков — опоры, не обязательная анкета до MVP.
+3. recover.py и validate_project.py: структура не заменяет семантику и реальный тест.
+4. Короткое Discovery → ближайший полезный результат / критерий / seam → план; один ACTIVE component.
 
-Если schema/project_master version старая, не мигрируй молча. Выполни `init_project.py --upgrade-plan`, зафиксируй план миграции и запроси approval перед преобразованием состояния.
+## Завершение и следующий инкремент
 
-## Gates
+finish требует reviews/final-review.md, VERIFIED evidence и реального completion acceptance. COMPLETE не обещает бизнес-успех. Новый increment: COMPLETE → ROADMAP, обновлённая миссия/план по текущему решению, история сохранена, новый контракт утверждён и проверен. OPERATE не завершается из-за одного удачного запуска.
 
-- `CONCEPT_REVIEW`: представить цель, пользователей, сценарии, in/out scope, требования, ограничения, риски и вопросы; затем зафиксировать concept approval.
-- Ключевые процессы: REVIEW → APPROVED и `approvals.processes=true`.
-- `ARCHITECTURE_REVIEW`: показать компоненты, технологии, ADR, альтернативы, trade-offs и риски.
-- `ROADMAP_REVIEW`: показать фазы, компоненты, результаты, critical path, зависимости и риски.
-- `COMPLETION_REVIEW`: только после полного аудита; COMPLETE — только после явного completion approval.
+## Upgrade
 
-Не спрашивай повторно неизменившийся approval. Источник, момент, перечень артефактов и aggregate hash сохраняй в `approval_records`. Если hash изменился, approval считается stale независимо от boolean в STATE.
-
-## Командная семантика
-
-- `status` только читает и кратко сообщает состояние.
-- `next` выполняет следующий разрешённый шаг либо называет конкретный gate/blocker.
-- `finish` не завершает напрямую; создаёт/обновляет `reviews/final-review.md` и переводит в COMPLETION_REVIEW.
-- Любая неизвестная команда трактуется как пользовательское намерение, но не как разрешение обойти lifecycle.
+upgrade.py plan — read-only. apply --mission <private definition> --source <owner instruction> — по поручению. Полная копия памяти и AGENTS остаётся в private/migrations (кроме прежних private backups и locks). Неизвестные STATE поля, active component, approvals и event chain сохранены. Stale approval блокирует upgrade. Старый CURRENT_STATE в backup; новый checkpoint компактен. При прерывании не повторяй вслепую: backup/current STATE, pending-state и MISSION нужно сверить и восстановить согласованно.
