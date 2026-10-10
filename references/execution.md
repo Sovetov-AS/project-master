@@ -4,9 +4,9 @@
 
 Перед production-изменением прочитай STATE, CURRENT_STATE, active phase PLAN/CONTEXT, active component, только referenced requirements/processes/ADRs и `git status` при наличии Git. Не загружай архив без необходимости.
 
-Работай только в пределах component contract и делай минимально достаточные изменения. Новая полезная функция вне approved scope — не бонус: классифицируй её через Change Control. Не меняй публичные интерфейсы, данные или процессы без отражения в requirements/BPMN/architecture.
+Работай в пределах текущего component contract и делай минимально достаточные изменения. Новую функцию вне scope классифицируй через Change Control; ясное текущее поручение может уже разрешать конкретное расширение без повторного gate. При смене публичного интерфейса/данных обнови затронутые требования и контракты; выбранную карту — только если она есть. Не требуй BPMN или заполнения всех документов для lean MVP.
 
-После реализации запусти релевантные tests/typecheck/lint/build. Переведи component в VERIFYING, сохрани evidence, проведи review против acceptance criteria, requirements и BPMN. Только после этого сделай COMPLETE, обнови TRACEABILITY, BUILD_LOG, CURRENT_STATE и STATE.
+После реализации запусти релевантные tests/typecheck/lint/build. Сохрани evidence и проверь acceptance criteria, затронутые требования/контракты и выбранную карту, если есть. Только после проверки complete-component; обнови существенные traceability/log/state. CURRENT_STATE обновляется скриптом автоматически, MISSION — при результате/feedback/решении, не для каждой команды.
 
 BUILD_LOG append-only: timestamp, phase, component, значимое action/result, verification, ADR/requirement/process refs и commit hash при наличии. Не логируй каждую команду.
 

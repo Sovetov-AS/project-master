@@ -32,6 +32,12 @@ jobs:
       - name: Run acceptance tests
         run: python -m unittest discover -s tests -v
 
+      - name: Validate editable interaction map
+        run: >-
+          python scripts/workflow.py validate
+          assets/templates/WORKFLOW-plugin-example.drawio
+          --strict
+
       - name: Validate lifecycle BPMN
         run: >-
           python scripts/validate_bpmn.py

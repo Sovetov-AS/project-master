@@ -36,7 +36,8 @@ class ProjectMasterTests(unittest.TestCase):
 
     def init(self, root: Optional[Path] = None, idea: str = "Сервис согласования заказов") -> Path:
         target = root or self.root
-        result = self.run_cli("init_project.py", "--name", "Test Project", "--idea", idea, root=target)
+        result = self.run_cli("init_project.py", "--name", "Test Project", "--idea", idea,
+                              "--profile", "FULL", "--schema-version", "2.1", root=target)
         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
         return target / ".project-master"
 

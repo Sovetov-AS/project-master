@@ -1,63 +1,73 @@
 ---
 name: project-master
-description: Управляет полным жизненным циклом сложного проекта с репозиторной памятью, human gates, BPMN, roadmap, поэтапной реализацией, recovery, проверкой и change control. Использовать для запуска, продолжения, планирования, реализации или аудита проекта, который ведётся через Project Master.
+description: >-
+  Сопровождает проекты, которые ведутся через Project Master: восстанавливает цель и локальную память, планирует проверяемые MVP-инкременты, развивает приложения и агентов от простого к сложному, хранит персональные уроки и измеримые результаты, проверяет взаимодействие компонентов и управляет точечными остановками. Использовать для запуска, продолжения, планирования, реализации, восстановления или аудита такого проекта; не навязывать lifecycle разовой задаче.
 metadata:
-  version: "2.1"
-  short-description: Управление сложным проектом от идеи до приёмки
+  version: "3.0"
+  short-description: Цель, память и развитие проекта от MVP к продукту
 ---
 
-# Project Master 2.1
+# Project Master 3.0
 
-Управляй проектом через `<PROJECT_ROOT>/.project-master/`. История разговора не является памятью. Глобальный skill — движок; никогда не сохраняй в нём состояние конкретного проекта.
+Общий skill — механизм; `<PROJECT_ROOT>/.project-master/` — память проекта. Данные, опыт и профессиональные знания владельца не добавляются в установленный skill или публичный пакет. История чата не заменяет память на диске.
 
-## Маршрутизация
+## Вход и восстановление
 
-1. Найди корень текущего проекта: ближайший родитель с `.project-master/`, иначе ближайший Git root, иначе текущий каталог.
-2. Без команды: если `.project-master/STATE.yaml` отсутствует — действуй как `start`; иначе как `resume`.
-3. Перед существенной работой запусти recovery по [recovery.md](references/recovery.md). Для новой идеи используй [discovery.md](references/discovery.md), затем [specification.md](references/specification.md).
-4. Выбери минимально достаточный lifecycle profile по [adaptive-lifecycle.md](references/adaptive-lifecycle.md). Новый проект начинает с `FULL` или `CRITICAL`; `QUICK` и `STANDARD` допустимы только для изменений поверх неизменившегося approved baseline.
-5. Для нетривиальной работы запиши требуемую capability и effort по [model-routing.md](references/model-routing.md). Не закрепляй этапы за конкретными именами моделей.
-6. Загружай только reference текущего режима:
+1. Найди реальный корень: ближайший родитель с .project-master, иначе Git root, иначе cwd. Не создавай вторую память в deployment-проекте, если у него уже есть связь с исходным проектом.
+2. status/аудит — чтение, без инициализации или upgrade. start без памяти — bootstrap по [lifecycle.md](references/lifecycle.md). Не навязывай Project Master маленькой разовой задаче.
+3. При resume/compaction/handoff прочитай актуальный SKILL.md заново и выполни `python3 <SKILL_ROOT>/scripts/recover.py --root <PROJECT_ROOT>` по [recovery.md](references/recovery.md). Восстанови цель, текущий increment, стратегию, результаты и применимые уроки ДО выбора следующей задачи. Затем только active contract и relevant refs, не весь архив.
+4. Память 2.1 поддерживается без молчаливой миграции. Upgrade требует поручения, upgrade.py plan, backup и рассмотренное private mission definition. Для 2.0 сначала migrate.py (→2.1), затем upgrade.py (→3.0).
+5. В 3.0 новый проект по умолчанию STANDARD. Правила v3 имеют приоритет над legacy full-lifecycle инструкциями; project-owned ограничения не отменяются автоматически.
 
-| Команда | Действие | Reference |
-|---|---|---|
-| `init`, `start [idea]` | Безопасный bootstrap, затем Discovery | [lifecycle.md](references/lifecycle.md) |
-| `resume`, `status`, `next` | Восстановить контекст и продолжить разрешённое действие | [recovery.md](references/recovery.md) |
-| `process ...` | Моделировать, читать, синхронизировать или ревьюить BPMN | [process-modeling.md](references/process-modeling.md) |
-| архитектура | Проектировать после concept/process approvals | [architecture.md](references/architecture.md) |
-| roadmap | Декомпозировать после architecture approval | [roadmap.md](references/roadmap.md) |
-| выполнение | Работать только над одним ACTIVE component | [execution.md](references/execution.md) |
-| `change <description>` | Создать change package и классифицировать correction/scope change | [change-control.md](references/change-control.md) |
-| `verify` | Проверить component/phase и сохранить evidence | [verification.md](references/verification.md) |
-| `audit`, `finish` | Найти drift или провести completion review | [completion-audit.md](references/completion-audit.md) |
+## Рабочий принцип
 
-## Непереходимые границы
+Конечная цель → ближайший полный полезный MVP → реальный тест → feedback → следующий increment. Сохраняй минимальный seam расширения, не строй будущий SaaS заранее. «Для себя → другим пользователям → отдельное приложение» — стратегия, не объём первого дня.
 
-- Не писать production code до approvals concept, ключевых processes, architecture и roadmap.
-- Не менять approved scope, requirements, BPMN, architecture или roadmap без Change Control.
-- Не иметь более одного ACTIVE component.
-- Не объявлять PASS/COMPLETE без сохранённого verification evidence.
-- Не считать approval действительным, если hash утверждённых артефактов изменился.
-- Не перезаписывать существующий `AGENTS.md`, `.project-master/` или ручные BPMN-изменения.
-- Не commit/push автоматически: `git_checkpoint_mode` по умолчанию `ask`; push всегда требует отдельного разрешения.
-- Все переходы состояния выполнять через `scripts/state.py`.
+BUILD — рабочая версия продукта. OPERATE — повторяющаяся работа с измеримым результатом, периодом, источником, target и лимитами. Количество задач не бизнес-успех. Нет данных — UNKNOWN, не ноль. Смена цели/режима сохраняет историю и требует решения владельца. Никаких фоновых расписаний без поручения.
 
-## Детерминированные операции
+Ясное текущее поручение может быть источником approval: запиши источник и действуй в его границах, не проси повторить специальную формулу. Собственная догадка не approval; историческое approval не новая live-write authority.
 
-Запускай скрипты из каталога этого skill, передавая явный `--root`:
+## Читать только нужный маршрут
+
+| Намерение | Reference |
+|---|---|
+| запуск / стадии | [lifecycle.md](references/lifecycle.md) |
+| resume / status / next | [recovery.md](references/recovery.md) |
+| цель / стратегия / метрики / знания / feedback | [goal-memory.md](references/goal-memory.md) |
+| профиль | [adaptive-lifecycle.md](references/adaptive-lifecycle.md) |
+| handoffs / skills / stops продукта | [interaction-map.md](references/interaction-map.md) |
+| бизнес-процесс BPMN, когда нужен | [process-modeling.md](references/process-modeling.md) |
+| Discovery / specification | [discovery.md](references/discovery.md), [specification.md](references/specification.md) |
+| архитектура / roadmap | [architecture.md](references/architecture.md), [roadmap.md](references/roadmap.md) |
+| исполнение / проверка | [execution.md](references/execution.md), [verification.md](references/verification.md) |
+| scope change | [change-control.md](references/change-control.md) |
+| audit / finish | [completion-audit.md](references/completion-audit.md) |
+| экономия / capability | [model-routing.md](references/model-routing.md) |
+
+## Границы по действию, не урезание продукта
+
+- Разделяй возможность продукта, реализацию/локальные тесты и разрешение на живое действие. Нет Ads.write authority — не запрет разрабатывать Ads.write.
+- STOP: причина, происхождение OWNER/PROVIDER/TOOL_POLICY/PROJECT_DECISION/HYPOTHESIS, проверяемое основание, конкретная область, владелец решения, условие продолжения. Запрет провайдера требует актуального официального источника/evidence; гипотеза не запрет API. Останови затронутую ветку, продолжай независимую разрешённую работу.
+- Действующее ограниченное разрешение не требует повторного подтверждения каждого обычного действия. Новая операция/объект/бюджет/срок/необратимость вне него — отдельное решение. Публикация кода, подключение, импорт базы, платный запрос, запуск продукта — разные действия.
+- Один писатель памяти и один ACTIVE component. Параллельные чтения допустимы; делегирование только когда разрешено пользователем/средой. Не запускай несколько чатов-писателей одного корня.
+- STATE через state.py, MISSION через mission.py. Не обходи hash/lock/pending transaction ручной правкой. Approval связан с контрактом, не обычным прогрессом или layout диаграммы. Уже stale approval не легализуется upgrade.
+- COMPLETE только с evidence, review и реальным owner acceptance. Тесты, runtime acceptance и бизнес-результат — разные уровни.
+- Commit/push только в пределах поручения. Личную память не публиковать даже при выпуске общего skill.
+
+## Инструменты
+
+Из каталога установленного skill, с явным --root; перед новой мутацией читай --help.
 
 ```bash
-python3 scripts/init_project.py --root <PROJECT_ROOT> [--name NAME] [--idea TEXT]
-python3 scripts/migrate.py --root <PROJECT_ROOT> plan|apply
-python3 scripts/state.py --root <PROJECT_ROOT> show|validate|summary
-python3 scripts/change.py --root <PROJECT_ROOT> --title TITLE --description TEXT --kind CORRECTION|SCOPE_CHANGE
+python3 scripts/init_project.py --root <PROJECT_ROOT> --idea <IDEA> --profile STANDARD
+python3 scripts/recover.py --root <PROJECT_ROOT>
+python3 scripts/upgrade.py --root <PROJECT_ROOT> plan
+python3 scripts/upgrade.py --root <PROJECT_ROOT> apply --mission <PRIVATE_DEFINITION.json> --source <OWNER_DECISION>
+python3 scripts/state.py --root <PROJECT_ROOT> validate
+python3 scripts/mission.py --root <PROJECT_ROOT> show
 python3 scripts/validate_project.py --root <PROJECT_ROOT>
-python3 scripts/validate_bpmn.py <FILE.bpmn>
-python3 scripts/traceability.py --root <PROJECT_ROOT> validate
+python3 scripts/workflow.py validate <FILE.drawio> --root <PROJECT_ROOT>
+python3 scripts/workflow.py compare <FILE.drawio> --baseline <PREVIOUS.drawio>
 ```
 
-Для мутаций сначала прочитай help конкретного скрипта. При ошибке validator не обходи gate вручную: устрани несогласованность или зафиксируй change/blocker.
-
-## Общение
-
-Основной язык — русский; filenames и IDs — английские; BPMN labels — русские. Пользователь — product owner. Задавай только вопросы, способные изменить продукт, scope, процесс, риск или критерий готовности. При resume показывай короткий статус в формате из [recovery.md](references/recovery.md); если решение не требуется, продолжай approved component.
+Русский по умолчанию. Статус: цель, доказанный результат, текущая работа, следующий шаг и конкретный выбор. Вопрос только когда ответ существенно меняет результат, архитектуру, стоимость или риск.

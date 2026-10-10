@@ -85,8 +85,8 @@ def apply(root: Path, accept_current: bool) -> int:
         "selected_at": timestamp,
     }
     data.update({
-        "schema_version": pm_state.VERSION,
-        "project_master_version": pm_state.VERSION,
+        "schema_version": "2.1",
+        "project_master_version": "2.1",
         "lifecycle_profile": "FULL",
         "profile_record": {
             "profile": "FULL", "at": timestamp, "source": "2.0 migration",

@@ -1,6 +1,6 @@
 # Process modeling и sync
 
-BPMN 2.0 XML — source of truth для flow; sidecar Markdown объясняет смысл. Mermaid допустим для статической архитектуры, но не заменяет BPMN.
+BPMN — опциональный инструмент бизнес-процессов, не обязательная схема lifecycle. Для handoffs, данных и STOP между skills/компонентами продукта используй interaction-map.md и редактируемый drawio. Если выбран BPMN, XML — flow source, sidecar объясняет смысл; не дублируй ту же карту в другом обязательном формате.
 
 ## Моделирование
 
@@ -9,6 +9,8 @@ BPMN 2.0 XML — source of truth для flow; sidecar Markdown объясняе�
 Используй L0/L1/L2 и subprocess, если диаграмма перестаёт читаться на одном экране. Файлы: `processes/{as-is,to-be,system}/PROC-XXX-slug.bpmn` и одноимённый `.md`. Статусы: DRAFT, REVIEW, APPROVED, IMPLEMENTED, DEPRECATED. Ключевые процессы требуют approval.
 
 ## Команды
+
+Для v3 sync с уже явно порученным изменением scope используй current-owner exception из change-control.md вместо повторного CHANGE_REVIEW. Непорученный конфликт всё ещё требует решения владельца.
 
 - `process list`: составь список из INDEX и фактических пар BPMN/sidecar, покажи расхождения.
 - `process <ID>`: прочитай XML, sidecar и связанные requirements/ADR/components; кратко объясни flow и риски.

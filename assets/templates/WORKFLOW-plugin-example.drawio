@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" compressed="false">
+  <diagram id="plugin-workflow" name="Взаимодействие skills — пример, не внедрение">
+    <mxGraphModel dx="1400" dy="860" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1440" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="legend" value="КАРТА ПРОДУКТА · пример плагина&#xa;Все узлы PLANNED. Стрелки — передаваемые артефакты. Стоп блокирует указанное действие, не весь проект." style="text;whiteSpace=wrap;html=0;align=left;verticalAlign=middle;fontSize=17;fontColor=#334155;" vertex="1" parent="1">
+          <mxGeometry x="60" y="15" width="1270" height="65" as="geometry" />
+        </mxCell>
+        <object id="N01" label="%pm_name%&#xa;→ %pm_outputs%" placeholders="1" pm_kind="trigger" pm_name="Задача владельца" pm_status="PLANNED" pm_outputs="request.context">
+          <mxCell style="rounded=1;whiteSpace=wrap;html=0;fontSize=15;fillColor=#e2e8f0;strokeColor=#64748b;" vertex="1" parent="1">
+            <mxGeometry x="60" y="130" width="190" height="120" as="geometry" />
+          </mxCell>
+        </object>
+        <object id="N02" label="%pm_name%&#xa;skill: %pm_handler%&#xa;→ %pm_outputs%" placeholders="1" pm_kind="skill" pm_name="Проверить контекст" pm_status="PLANNED" pm_handler="context-reader" pm_inputs="request.context" pm_outputs="context.validated">
+          <mxCell style="rounded=1;whiteSpace=wrap;html=0;fontSize=15;fillColor=#dbeafe;strokeColor=#2563eb;" vertex="1" parent="1">
+            <mxGeometry x="330" y="130" width="200" height="120" as="geometry" />
+          </mxCell>
+        </object>
+        <object id="N03" label="%pm_name%&#xa;skill: %pm_handler%&#xa;→ %pm_outputs%" placeholders="1" pm_kind="skill" pm_name="Подготовить изменение" pm_status="PLANNED" pm_handler="change-planner" pm_inputs="context.validated" pm_outputs="change.plan">
+          <mxCell style="rounded=1;whiteSpace=wrap;html=0;fontSize=15;fillColor=#dbeafe;strokeColor=#2563eb;" vertex="1" parent="1">
+            <mxGeometry x="600" y="130" width="200" height="120" as="geometry" />
+          </mxCell>
+        </object>
+        <object id="N04" label="%pm_name%&#xa;%pm_origin%&#xa;Блокирует: %pm_blocks%" placeholders="1" pm_kind="gate" pm_name="Есть действующее право?" pm_status="PLANNED" pm_inputs="change.plan" pm_outputs="change.authorized,change.paused" pm_stop_type="AUTHORIZATION" pm_reason="Внешняя запись не разрешена без полномочий на конкретное действие" pm_resume_when="Есть актуальное разрешение владельца или действующая политика с подходящими scope и лимитами" pm_owner="Владелец / проверка политики разрешений" pm_origin="OWNER" pm_basis="Условия разрешений согласуются с владельцем; пример не является разрешением" pm_blocks="N05">
+          <mxCell style="rhombus;perimeter=rhombusPerimeter;whiteSpace=wrap;html=0;fontSize=14;fillColor=#fef3c7;strokeColor=#d97706;" vertex="1" parent="1">
+            <mxGeometry x="860" y="115" width="210" height="150" as="geometry" />
+          </mxCell>
+        </object>
+        <object id="N05" label="%pm_name%&#xa;%pm_handler%&#xa;→ %pm_outputs%" placeholders="1" pm_kind="external" pm_name="Выполнить внешнюю запись" pm_status="PLANNED" pm_handler="provider-adapter" pm_effect="WRITE" pm_inputs="change.authorized" pm_outputs="write.receipt">
+          <mxCell style="rounded=1;whiteSpace=wrap;html=0;fontSize=15;fillColor=#ede9fe;strokeColor=#7c3aed;" vertex="1" parent="1">
+            <mxGeometry x="1140" y="130" width="200" height="120" as="geometry" />
+          </mxCell>
+        </object>
+        <object id="N06" label="%pm_name%&#xa;skill: %pm_handler%&#xa;→ %pm_outputs%" placeholders="1" pm_kind="skill" pm_name="Перечитать состояние" pm_status="PLANNED" pm_handler="result-verifier" pm_inputs="write.receipt" pm_outputs="result.observed">
+          <mxCell style="rounded=1;whiteSpace=wrap;html=0;fontSize=15;fillColor=#dbeafe;strokeColor=#2563eb;" vertex="1" parent="1">
+            <mxGeometry x="1140" y="400" width="200" height="120" as="geometry" />
+          </mxCell>
+        </object>
+        <object id="N07" label="%pm_name%&#xa;Блокирует: %pm_blocks%" placeholders="1" pm_kind="gate" pm_name="Результат совпал с планом?" pm_status="PLANNED" pm_inputs="result.observed" pm_outputs="result.verified,receipt.uncertain" pm_stop_type="MISMATCH" pm_reason="Ответ API не доказывает достижение требуемого состояния" pm_resume_when="Read-back подтверждает ожидаемое состояние той же операции" pm_owner="result-verifier" pm_origin="PROJECT_DECISION" pm_basis="Контракт результата данного примера: проверяем состояние, а не только код ответа" pm_blocks="N08">
+          <mxCell style="rhombus;perimeter=rhombusPerimeter;whiteSpace=wrap;html=0;fontSize=14;fillColor=#fef3c7;strokeColor=#d97706;" vertex="1" parent="1">
+            <mxGeometry x="860" y="385" width="210" height="150" as="geometry" />
+          </mxCell>
+        </object>
+        <object id="N08" label="%pm_name%&#xa;Операция подтверждена,&#xa;бизнес-результат ещё не доказан" placeholders="1" pm_kind="outcome" pm_name="Подтверждённое изменение" pm_status="PLANNED" pm_inputs="result.verified" pm_result="VERIFIED_OPERATION">
+          <mxCell style="rounded=1;whiteSpace=wrap;html=0;fontSize=15;fillColor=#dcfce7;strokeColor=#16a34a;" vertex="1" parent="1">
+            <mxGeometry x="600" y="400" width="200" height="120" as="geometry" />
+          </mxCell>
+        </object>
+        <object id="N09" label="%pm_name%&#xa;Продолжить после получения&#xa;права; разработка не запрещена" placeholders="1" pm_kind="outcome" pm_name="Ожидание полномочий" pm_status="PLANNED" pm_inputs="change.paused" pm_result="WAITING_FOR_AUTHORITY">
+          <mxCell style="rounded=1;whiteSpace=wrap;html=0;fontSize=15;fillColor=#fef3c7;strokeColor=#d97706;" vertex="1" parent="1">
+            <mxGeometry x="860" y="680" width="210" height="120" as="geometry" />
+          </mxCell>
+        </object>
+        <object id="N10" label="%pm_name%&#xa;skill: %pm_handler%&#xa;Без повторной записи" placeholders="1" pm_kind="skill" pm_name="Сверить ту же операцию" pm_status="PLANNED" pm_handler="operation-reconciler" pm_inputs="receipt.uncertain" pm_outputs="result.observed,result.blocked">
+          <mxCell style="rounded=1;whiteSpace=wrap;html=0;fontSize=15;fillColor=#dbeafe;strokeColor=#2563eb;" vertex="1" parent="1">
+            <mxGeometry x="600" y="680" width="200" height="120" as="geometry" />
+          </mxCell>
+        </object>
+        <object id="N11" label="%pm_name%&#xa;Нужны данные или решение; прочие&#xa;независимые действия доступны" placeholders="1" pm_kind="outcome" pm_name="Результат не подтверждён" pm_status="PLANNED" pm_inputs="result.blocked" pm_result="UNKNOWN">
+          <mxCell style="rounded=1;whiteSpace=wrap;html=0;fontSize=15;fillColor=#fee2e2;strokeColor=#dc2626;" vertex="1" parent="1">
+            <mxGeometry x="330" y="680" width="200" height="120" as="geometry" />
+          </mxCell>
+        </object>
+        <object id="E01" label="%pm_name%" placeholders="1" pm_name="Задача" pm_kind="transition" pm_mode="data" pm_artifact="request.context">
+          <mxCell style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;fontSize=12;endArrow=block;endFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="N01" target="N02"><mxGeometry relative="1" as="geometry" /></mxCell>
+        </object>
+        <object id="E02" label="%pm_name%" placeholders="1" pm_name="Контекст" pm_kind="transition" pm_mode="data" pm_artifact="context.validated">
+          <mxCell style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;fontSize=12;endArrow=block;endFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="N02" target="N03"><mxGeometry relative="1" as="geometry" /></mxCell>
+        </object>
+        <object id="E03" label="%pm_name%" placeholders="1" pm_name="План" pm_kind="transition" pm_mode="data" pm_artifact="change.plan">
+          <mxCell style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;fontSize=12;endArrow=block;endFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="N03" target="N04"><mxGeometry relative="1" as="geometry" /></mxCell>
+        </object>
+        <object id="E04" label="%pm_name%" placeholders="1" pm_name="Разрешено" pm_kind="transition" pm_mode="data" pm_artifact="change.authorized" pm_when="Право покрывает действие">
+          <mxCell style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;fontSize=12;endArrow=block;endFill=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="N04" target="N05"><mxGeometry relative="1" as="geometry" /></mxCell>
+        </object>
+        <object id="E05" label="%pm_name%" placeholders="1" pm_name="Квитанция" pm_kind="transition" pm_mode="data" pm_artifact="write.receipt">
+          <mxCell style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;fontSize=12;endArrow=block;endFill=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="N05" target="N06"><mxGeometry relative="1" as="geometry" /></mxCell>
+        </object>
+        <object id="E06" label="%pm_name%" placeholders="1" pm_name="Состояние" pm_kind="transition" pm_mode="data" pm_artifact="result.observed">
+          <mxCell style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;fontSize=12;endArrow=block;endFill=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="N06" target="N07"><mxGeometry relative="1" as="geometry" /></mxCell>
+        </object>
+        <object id="E07" label="%pm_name%" placeholders="1" pm_name="Совпало" pm_kind="transition" pm_mode="data" pm_artifact="result.verified" pm_when="Ожидаемое состояние подтверждено">
+          <mxCell style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;fontSize=12;endArrow=block;endFill=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="N07" target="N08"><mxGeometry relative="1" as="geometry" /></mxCell>
+        </object>
+        <object id="E08" label="%pm_name%" placeholders="1" pm_name="Нет права" pm_kind="transition" pm_mode="data" pm_artifact="change.paused" pm_when="Права нет или оно истекло">
+          <mxCell style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;fontSize=12;endArrow=block;endFill=1;exitX=0.5;exitY=1;entryX=1;entryY=0.5;" edge="1" parent="1" source="N04" target="N09"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1100" y="290" /><mxPoint x="1100" y="740" /></Array></mxGeometry></mxCell>
+        </object>
+        <object id="E09" label="%pm_name%" placeholders="1" pm_name="UNKNOWN" pm_kind="transition" pm_mode="data" pm_artifact="receipt.uncertain" pm_when="Расхождение или UNKNOWN">
+          <mxCell style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;fontSize=12;endArrow=block;endFill=1;exitX=0.5;exitY=1;entryX=1;entryY=0.5;" edge="1" parent="1" source="N07" target="N10"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="830" y="570" /><mxPoint x="830" y="740" /></Array></mxGeometry></mxCell>
+        </object>
+        <object id="E10" label="%pm_name%" placeholders="1" pm_name="Сверка ≤1" pm_kind="transition" pm_mode="data" pm_artifact="result.observed" pm_when="Есть новые данные той же операции" pm_max_attempts="1">
+          <mxCell style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;fontSize=12;endArrow=block;endFill=1;exitX=0.5;exitY=0;entryX=0;entryY=1;" edge="1" parent="1" source="N10" target="N07"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="700" y="570" /><mxPoint x="900" y="570" /></Array></mxGeometry></mxCell>
+        </object>
+        <object id="E11" label="%pm_name%" placeholders="1" pm_name="Стоп" pm_kind="transition" pm_mode="data" pm_artifact="result.blocked" pm_when="Данных нет или лимит сверки исчерпан">
+          <mxCell style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=0;fontSize=12;endArrow=block;endFill=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="N10" target="N11"><mxGeometry relative="1" as="geometry" /></mxCell>
+        </object>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

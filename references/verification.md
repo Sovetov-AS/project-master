@@ -1,6 +1,6 @@
 # Verification
 
-Код или документ сами по себе не доказывают выполнение. Component COMPLETE допустим только если выполнены acceptance criteria, tests прошли, evidence сохранено, связанные requirements удовлетворены, BPMN flow не нарушен, документация актуальна и state persisted.
+Код или документ сами по себе не доказывают выполнение. COMPLETE требует acceptance criteria, прошедших checks, сохранённого evidence, удовлетворённых требований/контрактов и выбранной карты, если есть. BPMN не обязателен. Evidence hash и наличие файла перепроверяются перед completion; семантика evidence проверяется review, не одним флагом.
 
 ## Evidence
 

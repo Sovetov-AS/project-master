@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Safe state-machine operations for Project Master 2.1.
+"""Safe state-machine operations for Project Master 3.0 (2.1 compatible).
 
 STATE.yaml is emitted as JSON-compatible YAML, allowing a dependency-free parser.
 Legacy non-JSON YAML is never rewritten implicitly; create a migration plan first.
@@ -14,12 +14,16 @@ import os
 import re
 import sys
 import tempfile
+import threading
 import uuid
+from contextlib import contextmanager
+from functools import wraps
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-VERSION = "2.1"
+VERSION = "3.0"
+SUPPORTED_SCHEMAS = {"2.1", "3.0"}
 STAGES = (
     "NEW", "DISCOVERY", "SPECIFICATION", "CONCEPT_REVIEW",
     "PROCESS_MODELING", "ARCHITECTURE", "ARCHITECTURE_REVIEW",
@@ -61,6 +65,54 @@ class StateError(RuntimeError):
     pass
 
 
+class StateData(dict):
+    """An optimistic concurrency token, never serialized into project memory."""
+    loaded_hash: Optional[str] = None
+
+
+_locks: Dict[str, int] = {}
+
+
+@contextmanager
+def exclusive(root: Path):
+    key = str(project_dir(root))
+    if _locks.get(key) == threading.get_ident():
+        yield
+        return
+    lock = project_dir(root) / "STATE.lock"
+    try:
+        descriptor = os.open(str(lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    except FileExistsError as exc:
+        raise StateError("STATE writer active or stale STATE.lock; inspect owner, never overwrite") from exc
+    _locks[key] = threading.get_ident()
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(str(os.getpid()))
+        yield
+    finally:
+        _locks.pop(key, None)
+        lock.unlink()
+
+
+def serialized(function):
+    @wraps(function)
+    def wrapped(root, *args, **kwargs):
+        with exclusive(root):
+            return function(root, *args, **kwargs)
+    return wrapped
+
+
+def transitions(data: Dict[str, Any]) -> Dict[str, set]:
+    result = {key: set(value) for key, value in PRIMARY_TRANSITIONS.items()}
+    if data.get("schema_version") == "3.0":
+        # Process modeling is optional; existing full paths remain supported.
+        result["CONCEPT_REVIEW"].add("ARCHITECTURE")
+        if data.get("lifecycle_profile") in {"QUICK", "STANDARD"}:
+            result["SPECIFICATION"].add("ROADMAP")
+        result["COMPLETE"].add("ROADMAP")  # a new increment, never a silent relaunch
+    return result
+
+
 def now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
@@ -90,7 +142,9 @@ def load_state(root: Path) -> Dict[str, Any]:
         ) from exc
     if not isinstance(data, dict):
         raise StateError("STATE.yaml root must be a mapping")
-    return data
+    result = StateData(data)
+    result.loaded_hash = state_digest(data)
+    return result
 
 
 def atomic_write(path: Path, text: str) -> None:
@@ -162,22 +216,86 @@ def initialize_event_log(root: Path, data: Dict[str, Any]) -> None:
 
 
 def ensure_event_log_current(root: Path, data: Optional[Dict[str, Any]] = None) -> None:
+    if (project_dir(root) / "pending-state.json").exists():
+        raise StateError("unfinished state transaction; run state.py repair before mutation")
     errors = validate_event_log(root, data or load_state(root))
     if errors:
         raise StateError("refusing mutation: " + "; ".join(errors))
 
 
+@serialized
 def save_state(root: Path, data: Dict[str, Any], event_type: str = "state.updated",
-               payload: Optional[Dict[str, Any]] = None) -> None:
+               payload: Optional[Dict[str, Any]] = None,
+               file_updates: Optional[Dict[Path, str]] = None) -> None:
     previous_hash: Optional[str] = None
     if state_path(root).is_file():
         previous_state = load_state(root)
         ensure_event_log_current(root, previous_state)
         previous_hash = state_digest(previous_state)
+        expected = getattr(data, "loaded_hash", None)
+        if expected is not None and expected != previous_hash:
+            raise StateError("stale STATE revision; reload before mutation")
     data["updated_at"] = now()
+    journal = project_dir(root) / "pending-state.json"
+    transaction = {"previous_state_hash": previous_hash, "state": dict(data),
+                   "event_type": event_type, "payload": payload or {}}
+    updates = []
+    for path, content in (file_updates or {}).items():
+        resolved = path.resolve()
+        if not resolved.is_relative_to(project_dir(root)) or not resolved.is_file():
+            raise StateError("transaction artifact must be an existing project-memory file")
+        updates.append({"path": str(resolved.relative_to(root.resolve())), "before": resolved.read_text(encoding="utf-8"), "after": content})
+    transaction["files"] = updates
+    transaction["sha256"] = state_digest(transaction)
+    atomic_write(journal, json.dumps(transaction, ensure_ascii=False, indent=2) + "\n")
+    for update in updates:
+        atomic_write(root.resolve() / update["path"], update["after"])
     atomic_write(state_path(root), json.dumps(data, ensure_ascii=False, indent=2) + "\n")
-    update_current_state(root, data)
     append_event(root, event_type, data, payload, previous_hash)
+    update_current_state(root, data)
+    journal.unlink()
+    if isinstance(data, StateData):
+        data.loaded_hash = state_digest(data)
+
+
+@serialized
+def repair(root: Path) -> None:
+    """Finish only a known interrupted transaction; never accept arbitrary edits."""
+    journal = project_dir(root) / "pending-state.json"
+    if not journal.is_file():
+        raise StateError("no pending transaction to repair")
+    transaction = json.loads(journal.read_text(encoding="utf-8"))
+    checksum = transaction.pop("sha256", None)
+    if checksum != state_digest(transaction):
+        raise StateError("pending transaction checksum mismatch")
+    target = transaction["state"]
+    current_hash = state_digest(load_state(root))
+    target_hash = state_digest(target)
+    old_hash = transaction["previous_state_hash"]
+    if current_hash not in {target_hash, old_hash}:
+        raise StateError("STATE diverged from pending transaction; reconcile saved backup")
+    log = event_log_path(root).read_text(encoding="utf-8").splitlines()
+    last = json.loads(log[-1])
+    # Validate the complete chain against its last state without rebaselining it.
+    check = target if last.get("state_hash") == target_hash else load_state(root)
+    if last.get("state_hash") == old_hash:
+        check = dict(check)
+        # validation below checks chain separately from state for pre-write crash.
+    errors = validate_event_log(root, check)
+    errors = [item for item in errors if item.startswith("event log/state mismatch") is False]
+    if errors or last.get("state_hash") not in {old_hash, target_hash}:
+        raise StateError("event log diverged; cannot repair automatically")
+    for update in transaction.get("files", []):
+        path = (root.resolve() / update["path"]).resolve()
+        if not path.is_relative_to(project_dir(root)) or not path.is_file() or path.read_text(encoding="utf-8") not in {update["before"], update["after"]}:
+            raise StateError("transaction artifact diverged; reconcile backup")
+    for update in transaction.get("files", []):
+        atomic_write(root.resolve() / update["path"], update["after"])
+    if last.get("state_hash") == old_hash:
+        append_event(root, transaction["event_type"], target, transaction["payload"], old_hash)
+    atomic_write(state_path(root), json.dumps(target, ensure_ascii=False, indent=2) + "\n")
+    update_current_state(root, target)
+    journal.unlink()
 
 
 def _replace_field(text: str, label: str, value: Any) -> str:
@@ -195,6 +313,19 @@ def _replace_first_bullet(text: str, heading: str, value: Any) -> str:
 
 def update_current_state(root: Path, data: Dict[str, Any]) -> None:
     path = project_dir(root) / "CURRENT_STATE.md"
+    if data.get("schema_version") == "3.0":
+        text = "# CURRENT STATE — derived checkpoint, not a history log\n\n"
+        text += "\n".join(f"{label}: {data.get(key) or '—'}" for label, key in (
+            ("Project", "project_name"), ("Stage", "stage"), ("Status", "status"),
+            ("Profile", "lifecycle_profile"), ("Phase", "active_phase"),
+            ("Component", "active_component"), ("Change", "active_change")))
+        text += "\n\nGoal, strategy, results, personal lessons: `private/MISSION.json`\n"
+        text += "\n## Next action\n\n- " + str(data.get("next_action") or "—") + "\n"
+        text += "\n## Last verification\n\n- " + json.dumps(data.get("last_verification"), ensure_ascii=False) + "\n"
+        text += "\n## Blockers (scoped)\n\n" + json.dumps(data.get("blockers", []), ensure_ascii=False, indent=2) + "\n"
+        text += "\nHistory: `state-events.jsonl`; existing narrative retained in the migration backup.\n"
+        atomic_write(path, text)
+        return
     if not path.is_file():
         return
     text = path.read_text(encoding="utf-8")
@@ -230,8 +361,12 @@ def validate_state(data: Dict[str, Any]) -> List[str]:
         if key not in data:
             errors.append(f"missing field: {key}")
     stage = data.get("stage")
+    if data.get("schema_version") not in SUPPORTED_SCHEMAS:
+        errors.append("unsupported schema_version; explicit migration required")
     if stage not in STAGES:
         errors.append(f"unknown stage: {stage}")
+    if stage == "COMPLETE" and data.get("active_component"):
+        errors.append("COMPLETE requires no ACTIVE component")
     approvals = data.get("approvals")
     if not isinstance(approvals, dict):
         errors.append("approvals must be a mapping")
@@ -275,25 +410,31 @@ def validate_state(data: Dict[str, Any]) -> List[str]:
             source, target = item.get("from"), item.get("to")
             if target in SIDE_STAGES or source in SIDE_STAGES:
                 continue
-            if target not in PRIMARY_TRANSITIONS.get(source, set()):
+            historical = transitions({**data, "lifecycle_profile": "STANDARD"})
+            if target not in historical.get(source, set()):
                 errors.append(f"impossible transition in history: {source} -> {target}")
     return errors
 
 
-def _normalized_approval_bytes(path: Path, area: str) -> bytes:
+def _normalized_approval_bytes(path: Path, area: str, version: str = "2.1") -> bytes:
     raw = path.read_bytes()
     if area != "roadmap" or path.suffix.lower() != ".md":
         return raw
     text = raw.decode("utf-8")
     text = re.sub(r"(?m)^Status:\s*`?[A-Z_]+`?\s*$", "Status: <MUTABLE>", text)
     text = re.sub(r"(?ms)^## Completion evidence\s*$.*?(?=^## |\Z)", "## Completion evidence\n<MUTABLE>\n", text)
+    if version == "3.0":
+        text = re.sub(r"(?im)\b(PLANNED|READY|ACTIVE|VERIFYING|VERIFIED|COMPLETE|SUPERSEDED|BLOCKED)\b(?=\s*\|)", "<PROGRESS>", text)
+        text = re.sub(r"(?m)^(\s*[-*] )\[[ xX]\]", r"\1[<PROGRESS>]", text)
     return text.encode("utf-8")
 
 
-def approval_artifacts(root: Path, area: str) -> List[Path]:
+def approval_artifacts(root: Path, area: str, version: str = "2.1") -> List[Path]:
     pm = project_dir(root)
     if area == "concept":
         candidates = [pm / name for name in ("VISION.md", "CONSTITUTION.md", "REQUIREMENTS.md", "RISKS.md", "OPEN_QUESTIONS.md")]
+        if version == "3.0":
+            candidates = [path for path in candidates if path.name not in {"RISKS.md", "OPEN_QUESTIONS.md"}]
     elif area == "processes":
         candidates = [pm / "processes" / "INDEX.md"]
         candidates += list((pm / "processes").rglob("*.bpmn"))
@@ -302,6 +443,8 @@ def approval_artifacts(root: Path, area: str) -> List[Path]:
         candidates = [pm / "ARCHITECTURE.md"] + list((pm / "decisions").glob("ADR-*.md"))
     elif area == "roadmap":
         candidates = [pm / "ROADMAP.md"]
+        if version == "3.0":
+            candidates += [pm / "VISION.md", pm / "REQUIREMENTS.md"]
         candidates += list((pm / "phases").glob("P*/PLAN.md"))
         candidates += list((pm / "phases").glob("P*/components/C*.md"))
     elif area == "completion":
@@ -311,15 +454,30 @@ def approval_artifacts(root: Path, area: str) -> List[Path]:
     return sorted({path.resolve() for path in candidates if path.is_file()}, key=lambda item: str(item))
 
 
-def approval_snapshot(root: Path, area: str) -> Tuple[str, List[Dict[str, str]]]:
+def approval_snapshot(root: Path, area: str, version: str = "2.1") -> Tuple[str, List[Dict[str, str]]]:
     pm = project_dir(root)
     items: List[Dict[str, str]] = []
     aggregate = hashlib.sha256()
-    for path in approval_artifacts(root, area):
+    for path in approval_artifacts(root, area, version):
         relative = path.relative_to(pm).as_posix()
-        digest = hashlib.sha256(_normalized_approval_bytes(path, area)).hexdigest()
+        digest = hashlib.sha256(_normalized_approval_bytes(path, area, version)).hexdigest()
         items.append({"path": relative, "sha256": digest})
         aggregate.update(relative.encode("utf-8") + b"\0" + digest.encode("ascii") + b"\n")
+    if version == "3.0" and area == "processes":
+        import workflow
+        for path in sorted((pm / "workflows").glob("*.drawio")):
+            contract = workflow.load_contract(path)
+            digest = workflow.fingerprint(contract)
+            relative = path.relative_to(pm).as_posix()
+            items.append({"path": relative, "sha256": digest})
+            aggregate.update(relative.encode("utf-8") + b"\0" + digest.encode("ascii") + b"\n")
+    if version == "3.0" and area == "roadmap":
+        import mission
+        data = mission.load(root)
+        definition = data["definition_history"][-1]["definition"]
+        digest = mission.digest(definition)
+        items.append({"path": "private/MISSION.json#definition", "sha256": digest})
+        aggregate.update(b"private/MISSION.json#definition\0" + digest.encode("ascii") + b"\n")
     return aggregate.hexdigest(), items
 
 
@@ -333,7 +491,7 @@ def approval_integrity_errors(root: Path, data: Dict[str, Any], areas: Optional[
         if not isinstance(record, dict) or not record.get("artifact_hash"):
             errors.append(f"approval {area} has no artifact hash; re-approval required")
             continue
-        current_hash, _ = approval_snapshot(root, area)
+        current_hash, _ = approval_snapshot(root, area, record.get("snapshot_version", "2.1"))
         if current_hash != record.get("artifact_hash"):
             errors.append(f"approval {area} is stale: approved artifacts changed")
     return errors
@@ -374,6 +532,10 @@ def validate_event_log(root: Path, data: Dict[str, Any]) -> List[str]:
 
 def missing_gate_approvals(root: Path, data: Dict[str, Any], target: str) -> List[str]:
     required = GATES.get(target, ())
+    if data.get("schema_version") == "3.0":
+        required = {**GATES, "ARCHITECTURE": ("concept",)}.get(target, ())
+        if data.get("lifecycle_profile") in {"QUICK", "STANDARD"}:
+            required = {"EXECUTION": ("roadmap",), "COMPLETE": ("completion",)}.get(target, ())
     missing = [name for name in required if not data.get("approvals", {}).get(name)]
     stale = {error.split()[1] for error in approval_integrity_errors(root, data, required)}
     return sorted(set(missing) | stale)
@@ -414,6 +576,7 @@ def find_component(root: Path, phase_id: str, component_id: str) -> Path:
     return matches[0]
 
 
+@serialized
 def transition(root: Path, target: str, reason: str, next_action: Optional[str]) -> None:
     data = load_state(root)
     source = data.get("stage")
@@ -423,7 +586,7 @@ def transition(root: Path, target: str, reason: str, next_action: Optional[str])
         raise StateError(f"use resolve while state is {source}")
     if target in SIDE_STAGES:
         data["resume_stage"] = source
-    elif target not in PRIMARY_TRANSITIONS.get(source, set()):
+    elif target not in transitions(data).get(source, set()):
         raise StateError(f"transition forbidden: {source} -> {target}")
     missing = missing_gate_approvals(root, data, target)
     if missing:
@@ -434,6 +597,16 @@ def transition(root: Path, target: str, reason: str, next_action: Optional[str])
         verification = data.get("last_verification") or {}
         if verification.get("outcome") != "VERIFIED":
             raise StateError("COMPLETE requires last_verification.outcome=VERIFIED")
+        if data.get("active_component") or any(component_status(path) == "ACTIVE" for path in _component_files(root)):
+            raise StateError("COMPLETE requires no ACTIVE component")
+        errors = verification_errors(root, verification, data.get("schema_version") == "3.0")
+        phase = data.get("active_phase")
+        if phase:
+            unfinished = [path.name for path in (find_phase(root, phase) / "components").glob("C*.md") if component_status(path) not in {"COMPLETE", "SUPERSEDED"}]
+            if unfinished:
+                errors.append("current phase has unfinished contracts: " + ", ".join(unfinished))
+        if errors:
+            raise StateError("; ".join(errors))
     data["stage"] = target
     data["status"] = "BLOCKED" if target == "BLOCKED" else (
         "WAITING_APPROVAL" if target.endswith("_REVIEW") else ("COMPLETE" if target == "COMPLETE" else "ACTIVE")
@@ -446,6 +619,7 @@ def transition(root: Path, target: str, reason: str, next_action: Optional[str])
     save_state(root, data, "stage.transitioned", {"from": source, "to": target, "reason": reason})
 
 
+@serialized
 def approve(root: Path, area: str, source: str, revoke: bool = False) -> None:
     data = load_state(root)
     if area not in APPROVALS:
@@ -453,20 +627,32 @@ def approve(root: Path, area: str, source: str, revoke: bool = False) -> None:
     value = not revoke
     if value and area == "completion" and not (project_dir(root) / "reviews" / "final-review.md").is_file():
         raise StateError("completion approval requires reviews/final-review.md")
+    if value and area == "roadmap" and data.get("schema_version") == "3.0":
+        import mission
+        definition = mission.load(root)["definition_history"][-1]["definition"]
+        if "NEEDS_REVIEW" in json.dumps(definition, ensure_ascii=False):
+            raise StateError("clarify the mission's NEEDS_REVIEW goal/acceptance fields before plan approval")
     data["approvals"][area] = value
-    artifact_hash, artifacts = approval_snapshot(root, area) if value else (None, [])
+    if not source.strip():
+        raise StateError("approval requires the actual owner decision source")
+    version = data.get("schema_version", "2.1")
+    artifact_hash, artifacts = approval_snapshot(root, area, version) if value else (None, [])
+    if value and not artifacts:
+        raise StateError("cannot approve an empty artifact set")
     data.setdefault("approval_records", {})[area] = {
         "approved": value, "at": now(), "source": source,
         "artifact_hash": artifact_hash, "artifacts": artifacts,
+        "snapshot_version": version,
     }
     save_state(root, data, "approval.changed", {"area": area, "approved": value, "source": source})
 
 
+@serialized
 def set_profile(root: Path, profile: str, reason: str, source: str) -> None:
     data = load_state(root)
     if profile not in LIFECYCLE_PROFILES:
         raise StateError(f"unknown lifecycle profile: {profile}")
-    if profile in {"QUICK", "STANDARD"}:
+    if data.get("schema_version") != "3.0" and profile in {"QUICK", "STANDARD"}:
         baseline = ("concept", "architecture", "roadmap")
         missing = [area for area in baseline if not data.get("approvals", {}).get(area)]
         stale = approval_integrity_errors(root, data, baseline)
@@ -481,6 +667,7 @@ def set_profile(root: Path, profile: str, reason: str, source: str) -> None:
     save_state(root, data, "profile.changed", {"from": old, "to": profile, "source": source, "reason": reason})
 
 
+@serialized
 def set_route(root: Path, mode: str, quality_profile: str, capability: str,
               effort: str, reason: str) -> None:
     if mode not in ROUTING_MODES:
@@ -492,6 +679,10 @@ def set_route(root: Path, mode: str, quality_profile: str, capability: str,
     if effort not in EFFORTS:
         raise StateError(f"unknown effort: {effort}")
     data = load_state(root)
+    proposed = {"mode": mode, "quality_profile": quality_profile,
+                "required_capability": capability, "minimum_effort": effort, "reason": reason}
+    if all((data.get("routing") or {}).get(key) == value for key, value in proposed.items()):
+        return
     data["routing"] = {
         "mode": mode,
         "quality_profile": quality_profile,
@@ -503,6 +694,7 @@ def set_route(root: Path, mode: str, quality_profile: str, capability: str,
     save_state(root, data, "routing.selected", dict(data["routing"]))
 
 
+@serialized
 def set_active(root: Path, phase: str, component: str, next_action: Optional[str]) -> None:
     data = load_state(root)
     ensure_event_log_current(root, data)
@@ -518,14 +710,16 @@ def set_active(root: Path, phase: str, component: str, next_action: Optional[str
     status = component_status(path)
     if status not in {"READY", "ACTIVE"}:
         raise StateError(f"component must be READY before activation, got {status}")
-    set_component_status(path, "ACTIVE")
+    text = path.read_text(encoding="utf-8")
+    text = re.sub(r"(?m)^Status:\s*`?[A-Z]+`?\s*$", "Status: ACTIVE", text, count=1)
     data["active_phase"] = phase
     data["active_component"] = component
     if next_action:
         data["next_action"] = next_action
-    save_state(root, data, "component.activated", {"phase": phase, "component": component})
+    save_state(root, data, "component.activated", {"phase": phase, "component": component}, {path: text})
 
 
+@serialized
 def record_verification(root: Path, outcome: str, evidence: str, method: str) -> None:
     data = load_state(root)
     if outcome not in {"VERIFIED", "PARTIALLY_VERIFIED", "NOT_VERIFIED"}:
@@ -540,10 +734,27 @@ def record_verification(root: Path, outcome: str, evidence: str, method: str) ->
     data["last_verification"] = {
         "outcome": outcome, "evidence": evidence, "method": method, "at": now(),
         "component": data.get("active_component"), "phase": data.get("active_phase"),
+        "evidence_sha256": hashlib.sha256(evidence_path.read_bytes()).hexdigest(),
     }
     save_state(root, data, "verification.recorded", {"outcome": outcome, "evidence": evidence, "method": method})
 
 
+def verification_errors(root: Path, verification: Dict[str, Any], require_hash: bool = False) -> List[str]:
+    reference = verification.get("evidence")
+    if not isinstance(reference, str) or not reference:
+        return ["verification evidence reference is missing"]
+    path = (root.resolve() / reference).resolve()
+    if not path.is_relative_to(root.resolve()) or not path.is_file():
+        return ["verification evidence changed or missing"]
+    digest = verification.get("evidence_sha256")
+    if require_hash and not digest:
+        return ["3.0 completion requires a current hashed verification record; legacy flags are not fresh evidence"]
+    if digest and hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+        return ["verification evidence changed or missing"]
+    return []
+
+
+@serialized
 def complete_component(root: Path) -> None:
     data = load_state(root)
     ensure_event_log_current(root, data)
@@ -554,6 +765,13 @@ def complete_component(root: Path) -> None:
         raise StateError("no active component")
     if verification.get("outcome") != "VERIFIED" or verification.get("component") != component:
         raise StateError("active component requires its own VERIFIED evidence")
+    errors = verification_errors(root, verification, data.get("schema_version") == "3.0")
+    if errors:
+        raise StateError("; ".join(errors))
+    if verification.get("evidence_sha256"):
+        saved = (root.resolve() / verification["evidence"]).resolve()
+        if not saved.is_relative_to(root.resolve()) or not saved.is_file() or hashlib.sha256(saved.read_bytes()).hexdigest() != verification["evidence_sha256"]:
+            raise StateError("verification evidence changed or missing; verify again")
     path = find_component(root, phase, component)
     text = path.read_text(encoding="utf-8")
     evidence = verification.get("evidence", "—")
@@ -564,14 +782,15 @@ def complete_component(root: Path) -> None:
         f"\n- Status: VERIFIED\n- Evidence: `{evidence}`\n"
         f"- Method: {verification.get('method', '—')}\n- Verified at: {verification.get('at', now())}\n\n"
     )
-    atomic_write(path, evidence_pattern.sub(lambda match: match.group(1) + evidence_body, text, count=1))
-    set_component_status(path, "COMPLETE")
+    text = evidence_pattern.sub(lambda match: match.group(1) + evidence_body, text, count=1)
+    text = re.sub(r"(?m)^Status:\s*`?[A-Z]+`?\s*$", "Status: COMPLETE", text, count=1)
     data["last_completed_component"] = component
     data["active_component"] = None
     data["next_action"] = "Проверить фазу либо активировать следующий READY component."
-    save_state(root, data, "component.completed", {"phase": phase, "component": component, "evidence": evidence})
+    save_state(root, data, "component.completed", {"phase": phase, "component": component, "evidence": evidence}, {path: text})
 
 
+@serialized
 def resolve(root: Path, reason: str, next_action: Optional[str]) -> None:
     data = load_state(root)
     source = data.get("stage")
@@ -589,10 +808,34 @@ def resolve(root: Path, reason: str, next_action: Optional[str]) -> None:
     save_state(root, data, "side_stage.resolved", {"from": source, "to": target, "reason": reason})
 
 
+@serialized
+def add_blocker(root: Path, reason: str, scope: str, resume_when: str, source: str,
+                origin: str, basis: str, owner: str, next_action: Optional[str] = None):
+    data = load_state(root)
+    if data.get("schema_version") == "3.0" and not all(value.strip() for value in (scope, resume_when, source, basis, owner)):
+        raise StateError("3.0 stop needs scope, resume-when, source, basis and owner; never invent a provider prohibition")
+    data.setdefault("blockers", []).append({"reason": reason, "at": now(), "scope": scope,
+        "resume_when": resume_when, "source": source, "origin": origin, "basis": basis, "owner": owner})
+    save_state(root, data, "blocker.added", data["blockers"][-1])
+    if scope == "project":
+        transition(root, "BLOCKED", reason, next_action)
+
+
+@serialized
+def clear_blocker(root: Path, index: int, source: str):
+    data = load_state(root)
+    if index < 0 or index >= len(data.get("blockers", [])):
+        raise StateError("blocker index out of range")
+    if data.get("schema_version") == "3.0" and not source.strip():
+        raise StateError("record why this scoped stop is actually resolved; removal is not new authority")
+    removed = data["blockers"].pop(index)
+    save_state(root, data, "blocker.cleared", {"index": index, "blocker": removed, "source": source})
+
+
 def summary(data: Dict[str, Any]) -> str:
     verification = data.get("last_verification") or {}
     return "\n".join((
-        "PROJECT MASTER 2.1",
+        f"PROJECT MASTER {VERSION} / memory {data.get('schema_version', 'unknown')}",
         f"Проект: {data.get('project_name', '—')}",
         f"Стадия: {data.get('stage', '—')} / {data.get('status', '—')}",
         f"Профиль: {data.get('lifecycle_profile') or '—'}",
@@ -613,6 +856,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("show")
     sub.add_parser("validate")
     sub.add_parser("summary")
+    sub.add_parser("repair")
     trans = sub.add_parser("transition")
     trans.add_argument("target", choices=STAGES)
     trans.add_argument("--reason", required=True)
@@ -643,8 +887,15 @@ def build_parser() -> argparse.ArgumentParser:
     block = sub.add_parser("block")
     block.add_argument("reason")
     block.add_argument("--next-action")
+    block.add_argument("--scope", default="project", help="project or concrete blocked action/node; action-scoped stops do not block unrelated work")
+    block.add_argument("--resume-when", default="")
+    block.add_argument("--source", default="")
+    block.add_argument("--basis", default="")
+    block.add_argument("--owner", default="")
+    block.add_argument("--origin", choices=("OWNER", "PROVIDER", "TOOL_POLICY", "PROJECT_DECISION", "HYPOTHESIS"), default="HYPOTHESIS")
     clear = sub.add_parser("clear-blocker")
     clear.add_argument("index", type=int)
+    clear.add_argument("--source", default="")
     resolve_parser = sub.add_parser("resolve")
     resolve_parser.add_argument("--reason", required=True)
     resolve_parser.add_argument("--next-action")
@@ -669,6 +920,9 @@ def main(argv: Optional[List[str]] = None) -> int:
             print("PASS: state is valid")
         elif args.command == "summary":
             print(summary(load_state(root)))
+        elif args.command == "repair":
+            repair(root)
+            print("PASS: interrupted transaction repaired")
         elif args.command == "transition":
             transition(root, args.target, args.reason, args.next_action)
             print(summary(load_state(root)))
@@ -691,17 +945,10 @@ def main(argv: Optional[List[str]] = None) -> int:
             complete_component(root)
             print(summary(load_state(root)))
         elif args.command == "block":
-            data = load_state(root)
-            data.setdefault("blockers", []).append({"reason": args.reason, "at": now()})
-            save_state(root, data, "blocker.added", {"reason": args.reason})
-            transition(root, "BLOCKED", args.reason, args.next_action)
+            add_blocker(root, args.reason, args.scope, args.resume_when, args.source, args.origin, args.basis, args.owner, args.next_action)
             print(summary(load_state(root)))
         elif args.command == "clear-blocker":
-            data = load_state(root)
-            if args.index < 0 or args.index >= len(data.get("blockers", [])):
-                raise StateError("blocker index out of range")
-            removed = data["blockers"].pop(args.index)
-            save_state(root, data, "blocker.cleared", {"index": args.index, "blocker": removed})
+            clear_blocker(root, args.index, args.source)
             print("PASS: blocker cleared")
         elif args.command == "resolve":
             resolve(root, args.reason, args.next_action)
