@@ -1,10 +1,20 @@
+# Project Master 3.1
+
+Навык для длительной разработки приложений: цель, архитектура, решения и точка продолжения между чатами. Компактное восстановление, проверка актуальности, граф зависимостей, архив закрытых экспериментов и локальный векторный поиск помогают загружать нужный контекст без перечитывания всей истории.
+
+Новое расширение подключается явно к существующей памяти 3.0 и не меняет ее схему. Python standard library обеспечивает основную работу; FastEmbed нужен только для локальной семантики. [Подключение и команды](references/development-memory.md), [проект изменений](docs/superpowers/specs/2026-11-17-continuity.md), [план](docs/superpowers/plans/2026-11-17-continuity.md).
+
+Механизм не гарантирует отсутствие регрессий и не создает автоматическую память в чате без доступа к проекту. Обязательные ограничения сохраняются даже при превышении бюджета; токены оцениваются приблизительно. Архивирование обратимо, исходные документы не удаляются.
+
+---
+
 <div align="center">
-  <img src="assets/project-master-banner.svg" alt="Project Master 3.0 — цель, память, MVP, результат" width="100%">
+  <img src="assets/project-master-banner.svg" alt="Project Master 3.1 — цель, память, MVP, результат" width="100%">
 </div>
 
 <p align="center">
   <a href="https://github.com/Sovetov-AS/project-master/actions/workflows/ci.yml"><img src="https://github.com/Sovetov-AS/project-master/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/version-3.0-7c3aed" alt="Version 3.0">
+  <img src="https://img.shields.io/badge/version-3.1-7c3aed" alt="Version 3.1">
   <img src="https://img.shields.io/badge/Python-3.9%2B-2563eb" alt="Python 3.9+">
   <img src="https://img.shields.io/badge/memory-project--local-0ea5e9" alt="Local memory">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e" alt="MIT"></a>
@@ -44,7 +54,7 @@ Project Master — USER-level Codex skill для долгой разработк
 Новая установка (если каталог уже существует — не клонируйте поверх него):
 
 ```bash
-git clone --branch v3.0.0 https://github.com/Sovetov-AS/project-master.git \
+git clone --branch main https://github.com/Sovetov-AS/project-master.git \
   "$HOME/.agents/skills/project-master"
 ```
 

@@ -10,7 +10,7 @@ import state
 import mission
 
 
-def recover(root: Path):
+def recover(root: Path, budget: int = 3000, compact: bool = False):
     data = state.load_state(root)
     errors = state.validate_state(data) + state.validate_event_log(root, data)
     if (state.project_dir(root) / "pending-state.json").exists():
@@ -24,7 +24,7 @@ def recover(root: Path):
         path = state.find_component(root, data["active_phase"], data["active_component"])
         refs += [str(path.relative_to(root.resolve())), str(path.parent.parent.relative_to(root.resolve()) / "PLAN.md"),
                  str(path.parent.parent.relative_to(root.resolve()) / "CONTEXT.md")]
-    return {"engine": state.VERSION, "schema": data["schema_version"], "mission": snapshot,
+    result = {"engine": state.VERSION, "schema": data["schema_version"], "mission": snapshot,
             "stage": data["stage"], "profile": data["lifecycle_profile"],
             "active_component": data.get("active_component"), "active_change": data.get("active_change"),
             "next_action": data.get("next_action"), "last_verification": data.get("last_verification"),
@@ -35,13 +35,26 @@ def recover(root: Path):
             "authority": "Historical approval is context, not new external-write authority",
             "limit": "Integrity/read-only recovery, not semantic review or runtime acceptance"}
 
+    import development_memory
+    if compact and development_memory.directory(root).exists():
+        try:
+            result = development_memory.context(root, result, budget)
+            result['errors'] = result['core']['errors']
+            result['estimated_tokens'] = development_memory.tokens(result)
+            result['budget_exceeded'] = result['estimated_tokens'] > budget
+        except (ValueError, OSError, KeyError) as exc:
+            result['memory_warning'] = f'Development memory unavailable: {exc}'
+    return result
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path.cwd())
+    parser.add_argument("--budget", type=int, default=3000)
+    parser.add_argument("--compact", action="store_true", help="opt-in bounded development context")
     args = parser.parse_args()
     try:
-        result = recover(args.root.resolve())
+        result = recover(args.root.resolve(), args.budget, args.compact)
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 1 if result["errors"] else 0
     except (state.StateError, mission.MissionError, OSError, ValueError) as exc:

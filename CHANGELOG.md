@@ -1,3 +1,11 @@
+# 3.1 — непрерывность разработки
+
+- Opt-in private development registry и checkpoint без миграции STATE/MISSION.
+- Freshness-aware recovery с настраиваемым бюджетом и явным overflow.
+- SQLite FTS5, явные связи графа и локальный multilingual FastEmbed adapter.
+- Обратимый архив закрытых failed/rejected экспериментов с активным кратким уроком.
+- Поведенческие тесты восстановления, stale sources, архива, графа и fallback.
+
 # Changelog
 
 All notable changes to Project Master are documented here.
