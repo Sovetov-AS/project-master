@@ -1,4 +1,6 @@
-# Project Master 3.1
+# Project Master 3.2
+
+В 3.2 восстановление может показать конечную цель и текущий результат из одной сохранённой ревизии рабочего плана, включая критерии и ссылки на схемы и решения. [Подключение](references/recovery.md#связь-с-рабочим-планом).
 
 Навык для длительной разработки приложений: цель, архитектура, решения и точка продолжения между чатами. Компактное восстановление, проверка актуальности, граф зависимостей, архив закрытых экспериментов и локальный векторный поиск помогают загружать нужный контекст без перечитывания всей истории.
 
@@ -9,12 +11,12 @@
 ---
 
 <div align="center">
-  <img src="assets/project-master-banner.svg" alt="Project Master 3.1 — цель, память, MVP, результат" width="100%">
+  <img src="assets/project-master-banner.svg" alt="Project Master 3.2 — цель, память, MVP, результат" width="100%">
 </div>
 
 <p align="center">
   <a href="https://github.com/Sovetov-AS/project-master/actions/workflows/ci.yml"><img src="https://github.com/Sovetov-AS/project-master/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/version-3.1-7c3aed" alt="Version 3.1">
+  <img src="https://img.shields.io/badge/version-3.2-7c3aed" alt="Version 3.2">
   <img src="https://img.shields.io/badge/Python-3.9%2B-2563eb" alt="Python 3.9+">
   <img src="https://img.shields.io/badge/memory-project--local-0ea5e9" alt="Local memory">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e" alt="MIT"></a>

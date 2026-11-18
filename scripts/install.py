@@ -39,7 +39,7 @@ def install(source: Path, target: Path, backup_root: Path, apply=False):
     if not apply:
         print(f"PLAN: {len(files)} public files -> {target}; full existing skill backup -> {backup_root}")
         return None
-    backup = backup_root / ("before-3.1-" + state.now().replace(":", "") + "-" + uuid.uuid4().hex[:8])
+    backup = backup_root / ("before-3.2-" + state.now().replace(":", "") + "-" + uuid.uuid4().hex[:8])
     backup.mkdir(parents=True, mode=0o700)
     if target.exists():
         shutil.copytree(target, backup / "skill")
@@ -55,7 +55,7 @@ def install(source: Path, target: Path, backup_root: Path, apply=False):
             raise ValueError(f"installed file mismatch: {file}")
         manifest[file.as_posix()] = wanted
     commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=source, capture_output=True, text=True, check=True).stdout.strip()
-    state.atomic_write(target / ".installation.json", json.dumps({"release": "3.1.0", "commit": commit, "files": manifest}, indent=2) + "\n")
+    state.atomic_write(target / ".installation.json", json.dumps({"release": "3.2.0", "commit": commit, "files": manifest}, indent=2) + "\n")
     print(f"PASS: installed {len(files)} verified files; previous skill backup: {backup}")
     return backup
 

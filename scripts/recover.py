@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 import state
 import mission
+import plan_context
 
 
 def recover(root: Path, budget: int = 3000, compact: bool = False):
@@ -34,6 +35,13 @@ def recover(root: Path, budget: int = 3000, compact: bool = False):
             "relevant_decisions": data.get("relevant_decisions", []), "errors": errors,
             "authority": "Historical approval is context, not new external-write authority",
             "limit": "Integrity/read-only recovery, not semantic review or runtime acceptance"}
+
+    try:
+        working_plan = plan_context.load(root)
+        if working_plan is not None:
+            result["working_plan"] = working_plan
+    except (ValueError, OSError, KeyError, TypeError) as exc:
+        result["working_plan_warning"] = f"Working plan unavailable: {exc}"
 
     import development_memory
     if compact and development_memory.directory(root).exists():

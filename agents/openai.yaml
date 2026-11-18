@@ -1,5 +1,5 @@
 interface:
-  display_name: "Project Master 3.1"
+  display_name: "Project Master 3.2"
   short_description: "Цель, память и развитие проекта от MVP к продукту"
   default_prompt: "Используй $project-master, чтобы запустить или продолжить текущий проект."
 policy:
